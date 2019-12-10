@@ -3,6 +3,7 @@
 #include <microsila_ll/core/data_types.h>
 
 /* Hardware configuration */
+
 #define SIZETYPE uint16_t
 
 

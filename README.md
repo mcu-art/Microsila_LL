@@ -7,8 +7,8 @@ This is a draft. There is no guarantee of the project development. It can be ref
 The goal is to simplify programming of one of the most popular STM32 boards - the STM32F103C8T6 Blue Pill board (and possibly other popular MCU boards in the future).
 STM32 devices are feature-rich, but that abundance brings a problem: complex setup and programming. Because each feaure has plenty of settings, there is almost infinite number of combinations of those settings. STM developed tools like `STM CubeMX` to deal with the complexity. But `microsila_ll` approach is different: use common and well tested setting sets whenever possible; only if impossible, use the heavy artillery.
 For example, using a widely spread crystal resonator with commonly used frequency (e.g. 8 MHz) in your project will simplify clock setup.
-Similarly, preferring 8 data bits and 1 stop bit with no parity control for UART will reduce the number of combinations for UART setting.
-Of course, you can go custom at any time and adjust almost everything to you need. But that will (significantly) increase  the programming and testing time.
+Similarly, preferring 8 data bits and 1 stop bit with no parity control for UART will make setup much easier.
+Of course, you can go custom at any time and adjust almost everything to you need with the cost of increased programming and testing time.
 
 ## Structure
 `microsila_ll` is a middleware based on STM Low-Level Drivers. That results in higher performance and fewer bugs in comparison with STM HAL library.

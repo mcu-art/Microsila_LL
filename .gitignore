@@ -14,7 +14,6 @@
 *.scvd
 *.iex
 *.sct
-*.MajerleT
 *.tjuln
 *.dbgconf
 *.uvguix
@@ -23,6 +22,7 @@
 *.i
 *.txt
 RTE/
+**.uvguix.*
 
 # IAR Settings  
 **/settings/*.crun  
