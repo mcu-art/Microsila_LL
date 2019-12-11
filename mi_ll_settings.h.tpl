@@ -8,10 +8,12 @@
 // 32-bit SIZETYPE seems to be the most efficient on STM32
 #define SIZETYPE uint32_t
 
+
 // BUFFER SIZES MUST BE DIVISIBLE BY 4 IN ORDER TO ALIGN DATA PROPERLY;
 // NOT COMPLYING TO THIS RULE MAY LEAD TO BUGS THAT ARE DIFFICULT TO FIND
 
-/* STM32F103C8 SECTION BEGIN */
+
+/* DEVICE SECTION BEGIN */
 #define MI_DEVICE  STM32F103C8
 
 /* UART SECTION  BEGIN */
@@ -24,12 +26,13 @@
 //#define UART3_USE_RX
 //#define UART3_USE_TX
 
-// Following definitions are not necessary to comment out if not used
+// Following definitions are not necessary to be commented out,
+// they have no impact on memory usage if corresponding uart disabled
 
 /* UART rx buffer size recommendations */
+
 // 64 bytes is sufficient at 115200 baud
 // 256 bytes is recommended at rates > 1Mbaud
-
 // Too small size will increase CPU usage and may result in data loss
 
 // UART1 RX

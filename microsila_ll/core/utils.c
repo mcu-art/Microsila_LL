@@ -1,104 +1,173 @@
 
 #include "utils.h"
+#include <limits.h>
+#include <math.h>
+#include <float.h>
+#include <stdarg.h>
+//#include <../Src/user/leds.h>
 
+#if MI_DEVICE == PC
+#include <stdio.h> // DEBUG
+#endif
 
-uint16_t make_word(uint16_t msb, uint16_t lsb) {
+inline uint16_t bytes_to_uint16(uint16_t msb, uint16_t lsb){
 	uint16_t result = msb << 8;
 	return result |= lsb;
 }
 
 
-/*
-uint32_t float_to_uint32(float f) {
-	static float _conv_float = 0.0f;
-	static uint32_t* _conv_float_uint = (uint32_t*) &_conv_float;
-	_conv_float = f;
-	return *_conv_float_uint;
-}
-*/
-
-
-/* Pseudo CRC of a command is a simple 16-bit XOR of all 16-bit words in the buffer except the last word,
-that is a value for verification.
-Note: XOR of a 16-bit word is equal to XOR of two bytes */
-BOOL validate_pseudo_crc16(const uint8_t* data, uint16_t size) {
-	uint8_t msbr = data[0];
-	uint8_t lsbr = data[1];
-	uint8_t i=2;
-	while (i<size-2) {
-		msbr ^= data[i];
-		lsbr ^= data[i+1];
-		i+=2;
-	}
-	if ( (data[size-2] == msbr) && (data[size-1] == lsbr)) { return TRUE; }
-	return FALSE;
+inline int32_t float_to_int32(float f)
+{
+	int32_t* iptr = (int32_t*)&f;
+	return (* iptr);
 }
 
 
+inline float int32_to_float(int32_t i) {
+	float* fptr = (float*)&i;
+	return (* fptr);
+}
 
-void fill_in_pseudo_crc16(uint8_t* data, uint16_t size) {
-	uint8_t msbr = data[0];
-	uint8_t lsbr = data[1];
-	uint8_t i=2;
-	while (i<size-2) {
-		msbr ^= data[i];
-		lsbr ^= data[i+1];
-		i+=2;
-	}
-	data[size-2] = msbr;
-	data[size-1] = lsbr;
+// Calculate ULPs (Units of Least Precision) between two floats
+// returns absolute value of ulps
+int32_t ulps_distance_float(float a, float b)
+{
+    // Save work if the floats are equal.
+    // Also handles +0 == -0
+    if (a == b) return 0;
+
+    static const int32_t max = INT32_MAX;
+
+    // Max distance for NaN
+    if (isnan(a) || isnan(b)) return max;
+
+		
+    // If one's infinite and they're not equal, max distance.
+    if (isinf(a) || isinf(b)) return max;
+	
+    
+    int32_t ia = float_to_int32(a);
+	  int32_t ib = float_to_int32(b);
+
+    // Don't compare differently-signed floats.
+    if ((ia < 0) != (ib < 0)) { return max; }
+
+    // Return the absolute value of the distance in ULPs.
+    int32_t distance = ia - ib;
+    if (distance < 0) distance = -distance;
+    return distance;
 }
 
 
-BOOL validate_crc32(const uint8_t* data, uint16_t size) {
-	uint32_t calculated = calc_crc32(data, size - 4, 0);
-	const uint32_t* received = (const uint32_t*) &data[size - 4];
-	if (calculated == *received) { return TRUE; }
-	return FALSE;
+BOOL almost_equal_floats(float a, float b, float tolerance) {
+	#define FLOAT_ULPS_EPSILON  4
+	// Handle the near-zero case
+        const float difference = (float) fabs(a - b);
+	if (difference <= tolerance) return TRUE;
+
+	return ulps_distance_float(a, b) <= FLOAT_ULPS_EPSILON;
 }
 
 
-void fill_in_crc32(uint8_t* data, uint16_t size) {
-	uint32_t calculated = calc_crc32(data, size - 4, 0);
-	uint32_t* dest = (uint32_t*) &data[size - 4];
-	*dest = calculated;
+inline int64_t double_to_int64(double d) {
+	int64_t* iptr = (int64_t*)&d;
+	return (* iptr);
+}
+
+inline double int64_to_double(int64_t i) {
+	double* dptr = (double*)&i;
+	return (* dptr);
 }
 
 
+// Calculate ULPs (Units of Least Precision) between two doubles
+// returns absolute value of ulps
+int64_t ulps_distance_double(double a, double b)
+{
+	if (a == b) return 0;
+	static const int64_t max = INT64_MAX;
+
+	// Max distance for NaN
+	if (isnan(a) || isnan(b)) return max;
+
+	// If one's infinite and they're not equal, max distance.
+	if (isinf(a) || isinf(b)) return max;
+
+	
+	int64_t ia = double_to_int64(a);
+	int64_t ib = double_to_int64(b);
+
+	if ((ia < 0) != (ib < 0)) { return max; }
+
+	// Return the absolute value of the distance in ULPs.
+	int64_t distance = ia - ib;
+	if (distance < 0) distance = -distance;
+	return distance;
+}
+
+
+BOOL almost_equal_doubles(double a, double b, double tolerance) {
+	#define DOUBLE_ULPS_EPSILON  4
+	// Handle the near-zero case
+	const double difference = fabs(a - b);
+	if (difference <= tolerance) return TRUE;
+	return ulps_distance_double(a, b) <= DOUBLE_ULPS_EPSILON;
+}
 
 /* Memory operations */
-void mi_memcpy(const void* src, void* dest, uint16_t size) {
+void mi_memcpy(const void* src, void* dest, SIZETYPE size) {
 	const uint8_t* srcPtr = src;
 	uint8_t* destPtr = (uint8_t*) dest;	
-	for(uint16_t x=0; x<size; x++) *destPtr++ = *srcPtr++;
+  for (SIZETYPE x=0; x<size; x++) *(destPtr++) = *(srcPtr++);
 }
 
-void mi_memset(void* memBlock, uint8_t value, uint16_t size) {
+void mi_memset(void* memBlock, uint8_t value, SIZETYPE size) {
 	uint8_t* ptr = memBlock;
-	for(uint16_t x=0; x<size; x++) *ptr++ = value;
+  for (SIZETYPE x=0; x<size; x++) *(ptr++) = value;
 }
 
 
-void mi_memzero(void* memBlock, uint16_t size) {
-	mi_memset(memBlock,0,size);
+void mi_memzero(void* memBlock, SIZETYPE size) {
+  mi_memset(memBlock, 0, size);
 }
 
 
-/* 	* @descr: Compares two data arrays.
+/* 	* @descr: Compare two data arrays.
 		* @param: const uint8_t* data - first array to compare
 							const uint8_t* tpl - 	second array to compare
-							uint16_t size - data size in bytes 
+                                                        SIZETYPE size - data size in bytes
 
 		* @return: TRUE if data match, FALSE otherwise
 */
-BOOL mi_memcmp(const uint8_t* data, const uint8_t* tpl, uint16_t size) {
-	for( uint16_t x = 0; x<size; ++x ){
-		if( data[x] != tpl[x]){return FALSE;}
+BOOL mi_memcmp(const uint8_t* data, const uint8_t* tpl, SIZETYPE size) {
+	for (SIZETYPE x = 0; x<size; ++x ){
+		if ( data[x] != tpl[x]){return FALSE;}
 	}
 	return TRUE;
 }
 
 
+BOOL mi_strcmp(const char* first, const char* sec) {
+	#define MI_STRCMP_MAX_SIZE  1024
+	
+	for (SIZETYPE x = 0; x<MI_STRCMP_MAX_SIZE; ++x ){
+		if ( first[x] != sec[x]){ return FALSE; }
+		if (!first[x]) return TRUE;
+	}
+	return FALSE; // String is too large to be compared
+}
+
+
+BOOL mi_memequal(const uint8_t* data, SIZETYPE size, const BYTE val) {
+	const uint8_t* to = data + size;
+	while (data != to) {
+		if (*data != val) { return FALSE; }
+		++data;
+	}
+	return TRUE;
+}
+
+/*
 BOOL compare_float(float f1, float f2) {
 	const float PRECISION = 0.00001f;
 	if (((f1 - PRECISION) < f2) && ((f1 + PRECISION) > f2)) {
@@ -112,121 +181,53 @@ BOOL compare_double(double d1, double d2) {
 		return TRUE;
 	} else { return FALSE; }
 }
+*/
 
-
-void set_bitmask_bit(uint8_t* bitmask, uint8_t bit_num, BOOL isTrue) {
-	uint8_t m;
+uint8_t _get_bit_mask(uint8_t bit_num) {
 	switch (bit_num) {
 			case 1:
-				m = 0x01;
-				break;
+				return 0x01;
 			case 2:
-				m = 0x02;
-				break;
+				return  0x02;
+
 			case 3:
-				m = 0x04;
-				break;
+				return  0x04;
+
 			case 4:
-				m = 0x08;
-				break;
+				return  0x08;
+
 			case 5:
-				m = 0x10;
-				break;
+				return  0x10;
+
 			case 6:
-				m = 0x20;
-				break;
+				return  0x20;
+
 			case 7:
-				m = 0x40;
-				break;
+				return  0x40;
+
 			case 8:
-				m = 0x80;
-				break;
+				return  0x80;
+
 			default:
-				m = 1;
-	}
-	if (isTrue) { // set bit
-		(*bitmask) |= m;
-	} else { // reset bit
-		m = (~m);
-		(*bitmask) &= m;
+				return 0x00;
 	}
 }
 
 
-
-static const uint32_t _crc32_lookup_table[256] =
-  {
-    // note: the first number of every second row corresponds to the half-byte look-up table !
-    0x00000000,0x77073096,0xEE0E612C,0x990951BA,0x076DC419,0x706AF48F,0xE963A535,0x9E6495A3,
-    0x0EDB8832,0x79DCB8A4,0xE0D5E91E,0x97D2D988,0x09B64C2B,0x7EB17CBD,0xE7B82D07,0x90BF1D91,
-    0x1DB71064,0x6AB020F2,0xF3B97148,0x84BE41DE,0x1ADAD47D,0x6DDDE4EB,0xF4D4B551,0x83D385C7,
-    0x136C9856,0x646BA8C0,0xFD62F97A,0x8A65C9EC,0x14015C4F,0x63066CD9,0xFA0F3D63,0x8D080DF5,
-    0x3B6E20C8,0x4C69105E,0xD56041E4,0xA2677172,0x3C03E4D1,0x4B04D447,0xD20D85FD,0xA50AB56B,
-    0x35B5A8FA,0x42B2986C,0xDBBBC9D6,0xACBCF940,0x32D86CE3,0x45DF5C75,0xDCD60DCF,0xABD13D59,
-    0x26D930AC,0x51DE003A,0xC8D75180,0xBFD06116,0x21B4F4B5,0x56B3C423,0xCFBA9599,0xB8BDA50F,
-    0x2802B89E,0x5F058808,0xC60CD9B2,0xB10BE924,0x2F6F7C87,0x58684C11,0xC1611DAB,0xB6662D3D,
-    0x76DC4190,0x01DB7106,0x98D220BC,0xEFD5102A,0x71B18589,0x06B6B51F,0x9FBFE4A5,0xE8B8D433,
-    0x7807C9A2,0x0F00F934,0x9609A88E,0xE10E9818,0x7F6A0DBB,0x086D3D2D,0x91646C97,0xE6635C01,
-    0x6B6B51F4,0x1C6C6162,0x856530D8,0xF262004E,0x6C0695ED,0x1B01A57B,0x8208F4C1,0xF50FC457,
-    0x65B0D9C6,0x12B7E950,0x8BBEB8EA,0xFCB9887C,0x62DD1DDF,0x15DA2D49,0x8CD37CF3,0xFBD44C65,
-    0x4DB26158,0x3AB551CE,0xA3BC0074,0xD4BB30E2,0x4ADFA541,0x3DD895D7,0xA4D1C46D,0xD3D6F4FB,
-    0x4369E96A,0x346ED9FC,0xAD678846,0xDA60B8D0,0x44042D73,0x33031DE5,0xAA0A4C5F,0xDD0D7CC9,
-    0x5005713C,0x270241AA,0xBE0B1010,0xC90C2086,0x5768B525,0x206F85B3,0xB966D409,0xCE61E49F,
-    0x5EDEF90E,0x29D9C998,0xB0D09822,0xC7D7A8B4,0x59B33D17,0x2EB40D81,0xB7BD5C3B,0xC0BA6CAD,
-    0xEDB88320,0x9ABFB3B6,0x03B6E20C,0x74B1D29A,0xEAD54739,0x9DD277AF,0x04DB2615,0x73DC1683,
-    0xE3630B12,0x94643B84,0x0D6D6A3E,0x7A6A5AA8,0xE40ECF0B,0x9309FF9D,0x0A00AE27,0x7D079EB1,
-    0xF00F9344,0x8708A3D2,0x1E01F268,0x6906C2FE,0xF762575D,0x806567CB,0x196C3671,0x6E6B06E7,
-    0xFED41B76,0x89D32BE0,0x10DA7A5A,0x67DD4ACC,0xF9B9DF6F,0x8EBEEFF9,0x17B7BE43,0x60B08ED5,
-    0xD6D6A3E8,0xA1D1937E,0x38D8C2C4,0x4FDFF252,0xD1BB67F1,0xA6BC5767,0x3FB506DD,0x48B2364B,
-    0xD80D2BDA,0xAF0A1B4C,0x36034AF6,0x41047A60,0xDF60EFC3,0xA867DF55,0x316E8EEF,0x4669BE79,
-    0xCB61B38C,0xBC66831A,0x256FD2A0,0x5268E236,0xCC0C7795,0xBB0B4703,0x220216B9,0x5505262F,
-    0xC5BA3BBE,0xB2BD0B28,0x2BB45A92,0x5CB36A04,0xC2D7FFA7,0xB5D0CF31,0x2CD99E8B,0x5BDEAE1D,
-    0x9B64C2B0,0xEC63F226,0x756AA39C,0x026D930A,0x9C0906A9,0xEB0E363F,0x72076785,0x05005713,
-    0x95BF4A82,0xE2B87A14,0x7BB12BAE,0x0CB61B38,0x92D28E9B,0xE5D5BE0D,0x7CDCEFB7,0x0BDBDF21,
-    0x86D3D2D4,0xF1D4E242,0x68DDB3F8,0x1FDA836E,0x81BE16CD,0xF6B9265B,0x6FB077E1,0x18B74777,
-    0x88085AE6,0xFF0F6A70,0x66063BCA,0x11010B5C,0x8F659EFF,0xF862AE69,0x616BFFD3,0x166CCF45,
-    0xA00AE278,0xD70DD2EE,0x4E048354,0x3903B3C2,0xA7672661,0xD06016F7,0x4969474D,0x3E6E77DB,
-    0xAED16A4A,0xD9D65ADC,0x40DF0B66,0x37D83BF0,0xA9BCAE53,0xDEBB9EC5,0x47B2CF7F,0x30B5FFE9,
-    0xBDBDF21C,0xCABAC28A,0x53B39330,0x24B4A3A6,0xBAD03605,0xCDD70693,0x54DE5729,0x23D967BF,
-    0xB3667A2E,0xC4614AB8,0x5D681B02,0x2A6F2B94,0xB40BBE37,0xC30C8EA1,0x5A05DF1B,0x2D02EF8D,
-  };
-	
-	
-
-
-uint32_t calc_crc32(const uint8_t* data, uint16_t size, uint32_t previous_crc32) {
-	uint32_t crc = ~previous_crc32; // same as previousCrc32 ^ 0xFFFFFFFF
-  const uint8_t* current = (const uint8_t*) data;
-  while (size-- > 0)
-    crc = (crc >> 8) ^ _crc32_lookup_table[(crc & 0xFF) ^ *(current++)];
-  return ~crc; // same as crc ^ 0xFFFFFFFF
-	
-}
-
-static inline void _write_digit(BYTE* output, const BYTE digit, const BYTE index) {
-	output[index] = digit + '0';
+inline uint8_t setbit_uint8(uint8_t bits, uint8_t bit_num) {
+	uint8_t m = _get_bit_mask(bit_num);
+	return bits |= m;
 }
 
 
-SIZETYPE uint32_to_str(uint32_t num, BYTE* output) {
-	SIZETYPE index = 0;
-	uint32_t d;
-	BOOL first_non_zero_digit_found = FALSE;
-	for (uint32_t div = 1000000000; div >= 10; div /= 10) {
-		d = num / div;
-		if (d) { _write_digit(output, d, index++); first_non_zero_digit_found = TRUE; }
-		else { if (first_non_zero_digit_found) {_write_digit(output, d, index++);} } // write zero in the middle
-		num -= d * div;
-	}
-	// last digit must be written anyway
-	output[index++] = num + '0';
-	return index;
+inline uint8_t resetbit_uint8(uint8_t bits, uint8_t bit_num) {
+	uint8_t m = _get_bit_mask(bit_num);
+	return bits &= (~m);
 }
 
 
-
-SIZETYPE strsize(const char* zero_terminated_string) {
-	static const SIZETYPE MAX_STR_SIZE = 1024;
+SIZETYPE mi_strlen(const char* zero_terminated_string) {
+	const SIZETYPE MAX_STR_SIZE = 1024;
 	SIZETYPE size = 0;
 	while (size < MAX_STR_SIZE) {
 		if (!zero_terminated_string[size]) { break; }
@@ -235,5 +236,296 @@ SIZETYPE strsize(const char* zero_terminated_string) {
 	return size;
 }
 
+
+void uint32_to_str(uint32_t num, ByteBuf* output) {
+	uint32_t d;
+	BOOL first_non_zero_digit_found = FALSE;
+	for (uint32_t div = 1000000000; div >= 10; div /= 10) {
+		d = num / div;
+		if (d) { bb_write_byte_if_fits(output, (d + '0')); first_non_zero_digit_found = TRUE; }
+		else { 
+			if (first_non_zero_digit_found) {
+				bb_write_byte_if_fits(output, (d + '0'));} 
+		} 
+		// write zero in the middle
+		num -= d * div;
+	}
+	// last digit must be written anyway
+	bb_write_byte_if_fits(output, (num + '0'));
+}
+
+
+void int32_to_str(int32_t num, ByteBuf* output) {
+	if (num < 0) {
+		bb_write_byte_if_fits(output, '-');
+		num = (~num) + 1;
+	}
+	uint32_to_str(num, output);
+}
+
+
+void _write_nibble(BYTE nibble, ByteBuf* output) {
+	BYTE sym;
+	switch (nibble) {
+		case 10:
+			sym = 'A';
+		  break;
+		case 11:
+			sym = 'B';
+		  break;
+		case 12:
+			sym = 'C';
+		  break;
+		case 13:
+			sym = 'D';
+		  break;
+		case 14:
+			sym = 'E';
+		  break;
+		case 15:
+			sym = 'F';
+		  break;
+		default:
+			sym = nibble + '0';
+	};
+	bb_write_byte_if_fits(output, sym);
+}
+
+
+void byte_to_hex_str(BYTE num, ByteBuf* output, BOOL leading_zeroes) {
+        BYTE nibble;
+        nibble = num >> 4;
+        if (!nibble) {
+            if (leading_zeroes) {
+                bb_write_byte_if_fits(output, '0');
+            }
+        } else {
+          _write_nibble(nibble, output);
+        }
+
+        nibble =  num & 0x0F;
+        _write_nibble(nibble, output);
+}
+
+
+
+void uint32_to_hex_str(uint32_t num, ByteBuf* output, BOOL leading_zeroes) {
+    if (!num) {
+        if (leading_zeroes) {
+            bb_append_str(output, "00000000");
+        } else {
+           bb_write_byte_if_fits(output, '0');
+        }
+        return;
+    }
+    #define UINT32_SIZE sizeof(uint32_t)
+    BYTE b[UINT32_SIZE];
+    for (SIZETYPE i=0; i<UINT32_SIZE; ++i) {
+        b[i] = (BYTE) num;
+        num >>=8;
+    }
+
+    if (leading_zeroes) {
+        for (int32_t i=3; i>=0; --i) {
+            byte_to_hex_str(b[i], output, TRUE);
+        }
+    } else {
+        for (int32_t i=3; i>=0; --i) {
+            if (!b[i]) { continue; }
+            byte_to_hex_str(b[i], output, FALSE);
+        }
+    }
+}
+
+
+void float_to_str(double d, uint8_t digits_after_dp, ByteBuf* output) {
+
+    #define FTS_MAX_DIGITS_AFTER_DP  8
+    // Check if number of digits after decimal point is within expected range
+    if (!digits_after_dp) { digits_after_dp = 1; }
+
+    if (digits_after_dp > FTS_MAX_DIGITS_AFTER_DP) {
+            digits_after_dp = FTS_MAX_DIGITS_AFTER_DP;
+    }
+
+    if (isnan(d)) {
+            bb_append_str(output, "NAN");
+            return;
+    }
+
+    if (isinf(d)) {
+            bb_append_str(output, "infinity");
+            return;
+    }
+
+    if (d < 0) {
+            d *= -1.0;
+            bb_write_byte_if_fits(output, '-');
+    }
+
+    if (d > (double) 0xFFFFFFFF) {
+            bb_append_str(output, "large");
+            return;
+    }
+
+    uint32_t intpart = (uint32_t) d;
+    if (!intpart) {
+            bb_append_str(output, "0.0");
+            return;
+    }
+
+    // prepare fractional part
+	
+    d -= intpart; // remove integral part from d
+
+    uint32_t mult = 1;
+    uint8_t iters = digits_after_dp;
+    while (iters) {
+        mult *= 10;
+        --iters;
+    }
+    d += 1.0;
+    d *= (double) mult;
+
+    uint32_t fract_intpart = (uint32_t) d;
+
+    if ((d - fract_intpart) >= 0.5) {  // round up
+            ++fract_intpart;
+            // if only one digit after dp, round up to integral part
+            if (digits_after_dp == 1) { ++intpart; }
+    }
+
+    // write prepared data
+    uint32_to_str(intpart, output);
+    bb_write_byte_if_fits(output, '.');
+    uint32_to_str(fract_intpart, output);
+
+    if (!fract_intpart) { // fractional part is zero
+        bb_write_byte_if_fits(output, '0');
+        return;
+    }
+
+    // remove extra `1`
+    // shift symbols after decimal point one place to the left
+    for (uint8_t i=0; i<digits_after_dp; ++i) {
+            output->data[output->wIndex - digits_after_dp + i - 1] =
+               output->data[output->wIndex - digits_after_dp + i] ;
+    }
+    --output->wIndex;
+
+    // remove trailing zeroes if any
+    uint8_t trailing_zero_count = 0;
+    for (uint8_t i=1; i<(digits_after_dp); ++i) {
+            if (output->data[output->wIndex - i] == '0') {
+                    ++trailing_zero_count;
+            }
+    }
+    output->wIndex -= trailing_zero_count;
+}
+
+
+inline BOOL is_dec_digit(const char c) {
+    return ((c>='0') && (c<='9')) ? TRUE: FALSE;
+}
+
+
+static inline BOOL is_fmt_supported(const char c) {
+    switch (c) {
+        case 'd':
+        case 'f':
+        case 'x':
+        case '%':
+            return TRUE;
+        default:
+            return FALSE;
+    };
+}
+
+
+// If placeholder found in string, fill in the `ph` struct
+// Return: TRUE if found, FALSE otherwise
+BOOL mi_fmt_str_find_placeholder(const char* s, const SIZETYPE len, MiFmtStrPhDesc* ph) {
+	for (SIZETYPE i = 0; i<len; ++i) {
+		if (s[i] == '%') {
+			if (i == (len-1)) { return FALSE; } // '%' at the end of the string
+			if (is_dec_digit(s[i+1])) { // parse num of digits
+				if (i == (len-2)) { return FALSE; }
+				if (is_fmt_supported(s[i+2])) {
+					ph->type = s[i+2];
+					ph->param = s[i+1] - '0';
+					ph->len = 3;
+					ph->pos = i;
+					return TRUE;
+				}
+			} else if (is_fmt_supported(s[i+1])) {
+				ph->type = s[i+1];
+				ph->param = 0;
+		    ph->len = 2;
+				ph->pos = i;
+				return TRUE;
+			} else {
+				return FALSE;
+			}
+		}
+	}
+	return FALSE;
+}
+
+
+OP_RESULT mi_fmt_str(ByteBuf* output, const char* s, ...) {
+	OP_RESULT result = OPR_OK;
+	va_list args; 
+	va_start(args, s);
+	
+	const SIZETYPE len = mi_strlen(s);
+	SIZETYPE start_index = 0;
+	int32_t iarg;
+	double farg;
+	
+	MiFmtStrPhDesc ph;
+
+        uint32_t dbg_count = 0;
+
+	// Find all placeholders in the string
+	while (mi_fmt_str_find_placeholder(s + start_index, len - start_index, &ph)) {
+#if MI_DEVICE == PC
+              dbg_count++;
+              //printf("I: %d, looking for placeholders in: '%s'\n", dbg_count, s + start_index);
+#endif
+		// add part before the placeholder
+		bb_append_array_if_fits(output, (const BYTE*) (s + start_index), ph.pos);
+		
+		// replace placeholder
+		switch (ph.type) {
+			case 'd':
+                                iarg = va_arg(args, int32_t);
+				int32_to_str(iarg, output);
+				break;
+			case 'f':
+                                farg = va_arg(args, double);
+				float_to_str(farg, ph.param, output);
+				break;
+			case 'x':
+                                iarg = va_arg(args, int32_t);
+                                uint32_to_hex_str(iarg, output, ph.param);
+				break;
+			case '%':
+				bb_write_byte_if_fits(output, '%');
+				break;
+		}
+		// advance start_index
+		SIZETYPE new_index = start_index + ph.pos + ph.len;
+                if (new_index > len) { break; }
+		start_index = new_index;
+	}
+	
+	// add the rest of string
+	bb_append_array_if_fits(output, (const BYTE*) s, (len - start_index));
+	
+	va_end(args);
+	
+	return result;
+	
+}
 
 

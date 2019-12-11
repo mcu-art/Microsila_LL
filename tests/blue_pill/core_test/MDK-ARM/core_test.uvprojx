@@ -429,14 +429,34 @@
           <GroupName>test</GroupName>
           <Files>
             <File>
-              <FileName>test.c</FileName>
+              <FileName>byte_buf_test.c</FileName>
               <FileType>1</FileType>
-              <FilePath>..\Src\test\test.c</FilePath>
+              <FilePath>..\Src\test\byte_buf_test.c</FilePath>
             </File>
             <File>
-              <FileName>test.h</FileName>
+              <FileName>crc_test.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\Src\test\crc_test.c</FilePath>
+            </File>
+            <File>
+              <FileName>utils_test.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\Src\test\utils_test.c</FilePath>
+            </File>
+            <File>
+              <FileName>byte_buf_test.h</FileName>
               <FileType>5</FileType>
-              <FilePath>..\Src\test\test.h</FilePath>
+              <FilePath>..\Src\test\byte_buf_test.h</FilePath>
+            </File>
+            <File>
+              <FileName>crc_test.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>..\Src\test\crc_test.h</FilePath>
+            </File>
+            <File>
+              <FileName>utils_test.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>..\Src\test\utils_test.h</FilePath>
             </File>
           </Files>
         </Group>

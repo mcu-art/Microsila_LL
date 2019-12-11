@@ -11,19 +11,18 @@ ByteBuf* bb_init(BYTE* memblock, const SIZETYPE size) {
 	bb->size = size;
 	bb->rIndex = 0;
 	bb->wIndex = 0;
-	bb_zero_data(bb);
 	return bb;
 }
 
 
-inline void bb_reset_indexes(ByteBuf* inst) {
+inline void bb_reset(ByteBuf* inst) {
 	inst->rIndex = 0;
 	inst->wIndex = 0;
 }
 
 
 inline void bb_zero_data(ByteBuf* inst) {
-	bb_reset_indexes(inst);
+	bb_reset(inst);
 	mi_memzero(inst->data, inst->size); 
 }
 
@@ -47,6 +46,7 @@ inline void bb_write_byte(ByteBuf* inst, BYTE data) {
 
 
 inline void bb_read_into_array(ByteBuf* inst, BYTE* dest, const SIZETYPE size) {
+	if (!size) { return; }
 	BYTE* src = inst->data + inst->rIndex;
 	inst->rIndex += size;
 	BYTE* limit = inst->data + inst->rIndex;
@@ -54,8 +54,9 @@ inline void bb_read_into_array(ByteBuf* inst, BYTE* dest, const SIZETYPE size) {
 }
 
 
-inline OP_RESULT bb_append_array_if_fits(const BYTE* src, ByteBuf* inst, const SIZETYPE size) {
-	if (bb_free_space(inst) < size) { return OPR_NOT_ENOUGH_SPACE; }
+inline OP_RESULT bb_append_array_if_fits(ByteBuf* inst, const BYTE* src, const SIZETYPE size) {
+	if (!size) { return OPR_OK; }
+	if (bb_free_space(inst) < size) { return OPR_OUT_OF_SPACE; }
 	BYTE* dest = inst->data + inst->wIndex;
 	inst->wIndex += size;
 	BYTE* limit = inst->data + inst->wIndex;
@@ -69,7 +70,12 @@ inline OP_RESULT bb_write_byte_if_fits(ByteBuf* inst, const BYTE data) {
 		inst->data[inst->wIndex++] = data;
 		return OPR_OK;
 	}
-	return OPR_NOT_ENOUGH_SPACE;
+	return OPR_OUT_OF_SPACE;
+}
+
+inline OP_RESULT bb_append_str(ByteBuf* inst, const char* strzero) {
+	SIZETYPE len = mi_strlen(strzero);
+	return bb_append_array_if_fits(inst, (const BYTE*) strzero, len);
 }
 
 
@@ -86,7 +92,6 @@ void bb_transfer(ByteBuf* src, ByteBuf* dest) {
 	if (size > free_space) { size = free_space; }
 	//Return if src buffer is empty or dest buffer is full
 	if (!size) return;
-	
 	
   // copy data from src to dest
 	BYTE* reader = src->data + src->rIndex;
@@ -126,7 +131,7 @@ SIZETYPE bb_lazy_compact(ByteBuf* inst, const SIZETYPE bytes_to_fit) {
 	if (!inst->rIndex) { return 0; } // nothing to compact
 	SIZETYPE freed = inst->rIndex; 
 	if (inst->rIndex == inst->wIndex) { 
-		bb_reset_indexes(inst); 
+		bb_reset(inst); 
 		return freed;
 	} // low cost compact
 	if (bb_free_space(inst) < bytes_to_fit) { // reluctant compact
@@ -134,101 +139,3 @@ SIZETYPE bb_lazy_compact(ByteBuf* inst, const SIZETYPE bytes_to_fit) {
 	}
 	return freed;
 }
-
-
-/*
-// =========================================================================================
-// ByteBuf TESTS
-
-static inline void _fillin_seq_data(ByteBuf* b, const SIZETYPE total) {
-	for (SIZETYPE i=0; i<total; ++i) {
-		bb_write_byte(b, (BYTE) i);
-	}
-}
-
-
-BOOL bb_test_init(void) {
-	const SIZETYPE DATA_SIZE = 20;
-	BYTE arr[DATA_SIZE + sizeof(ByteBuf)];
-	ByteBuf* b = bb_init(arr, DATA_SIZE);
-	
-	BOOL result = TRUE;
-	if (b->size != DATA_SIZE) result = 0;
-	
-	_fillin_seq_data(b, DATA_SIZE);
-	
-	if (b->rIndex) result = 0;
-	if (b->wIndex != b->size) result = 0;
-	if (arr[sizeof(arr) - 1] != DATA_SIZE-1) result = 0;
-	
-	return result;
-
-}
-
-
-BOOL bb_test_compact(void) {
-	const SIZETYPE DATA_SIZE = 20;
-	BYTE arr[DATA_SIZE + sizeof(ByteBuf)];
-	ByteBuf* b = bb_init(arr, DATA_SIZE);
-	_fillin_seq_data(b, DATA_SIZE);
-	
-	BOOL result = TRUE;
-	if (0 != bb_read_byte(b)) result = 0;
-	if (1 != bb_read_byte(b)) result = 0;
-	if (2 != bb_read_byte(b)) result = 0;
-	if (b->rIndex != 3) result = 0;
-	bb_compact(b);
-	if (b->rIndex != 0) result = 0;
-	if (b->wIndex != b->size-3) result = 0;
-	if (3 != bb_read_byte(b)) result = 0;
-
-	return result;
-}
-
-
-const SIZETYPE TRANSFER_DATA_SIZE = 2048;
-static BYTE src_arr[TRANSFER_DATA_SIZE + sizeof(ByteBuf)];
-#define TRANSFER_SIZE_DIFF 4
-	
-static BYTE dest_arr[TRANSFER_DATA_SIZE + sizeof(ByteBuf) - TRANSFER_SIZE_DIFF];
-
-BOOL bb_test_transfer(void) {
-	
-	ByteBuf* src = bb_init(src_arr, TRANSFER_DATA_SIZE);
-	ByteBuf* dest = bb_init(dest_arr, TRANSFER_DATA_SIZE - TRANSFER_SIZE_DIFF);
-	
-	_fillin_seq_data(src, TRANSFER_DATA_SIZE);
-	BOOL result = TRUE;
-	
-	bb_read_byte(src);
-	bb_read_byte(src);
-
-	bb_transfer(src, dest);
-	if (bb_unread_size(src) != 2) result = 0;
-	if (bb_unread_size(dest) != dest->size) result = 0;
-	
-	if (2 != bb_read_byte(dest)) result = 0;
-	if (3 != bb_read_byte(dest)) result = 0;
-	bb_compact(dest);
-	bb_transfer(src, dest);
-	if (!bb_empty(src)) result = 0;
-	if (bb_unread_size(dest) != dest->size) result = 0;
-	return result;
-}
-
-
-BOOL bb_test_all(void) {
-	BOOL result = TRUE;
-	if (! bb_test_init()) result = 0;
-	if (! bb_test_compact()) result = 0;
-	if (! bb_test_transfer()) result = 0;
-	return result;
-}
-
-
-// ByteBuf TESTS END
-// =========================================================================================
-*/
-
-
-

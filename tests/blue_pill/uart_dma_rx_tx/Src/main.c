@@ -340,10 +340,7 @@ static void _main_routine(void) {
 	
 	set_baud(2100000);
 	visualize_result(UartTest_RunOne(UART_TEST_TRIPLE_TX_RX));
-	delay(2000);
-	led_signal_disable();
-	
-	
+
 	while (TRUE) { }
 	
 }

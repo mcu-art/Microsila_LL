@@ -295,9 +295,9 @@ void uart2_rx_disable(void) {
 static inline void _uart2_append_rx_data_securely(const BYTE* data, SIZETYPE size) {
 	if (!uart2._prim_rxbuf_locked) { 
 			// write received data into prim_rxbuf if there is enough free space in it
-			bb_append_array_if_fits(data, uart2._prim_rxbuf, size);
+			bb_append_array_if_fits(uart2._prim_rxbuf, data, size);
 		} else { // write received data to sec_rxbuf if there is enough free space in it
-			bb_append_array_if_fits(data, uart2._sec_rxbuf, size);
+			bb_append_array_if_fits(uart2._sec_rxbuf, data, size);
 		}
 }
 
@@ -372,7 +372,7 @@ void uart2_do_processing(void) {
 			uart2.on_rx_callback(uart2.rxbuf);
 		}
 		// discard all unprocessed data
-		bb_reset_indexes(uart2.rxbuf);
+		bb_reset(uart2.rxbuf);
 	}
 }
 
@@ -480,11 +480,11 @@ OP_RESULT uart2_tx(const BYTE* data, const SIZETYPE size) {
 	SIZETYPE freed = bb_lazy_compact(uart2.txbuf, size);
 	if (size > bb_free_space(uart2.txbuf)) {
 		_RESTORE_INTERRUPTS;
-		return OPR_NOT_ENOUGH_SPACE;
+		return OPR_OUT_OF_SPACE;
 	}
 	
 	// write data into the txbuf
-	if (OPR_OK == bb_append_array_if_fits(data, uart2.txbuf, size)) {
+	if (OPR_OK == bb_append_array_if_fits(uart2.txbuf, data, size)) {
 		// update txbuf free space counter
 		uart2.txbuf_free_space -= size;
 	}
@@ -510,16 +510,19 @@ void uart2_tx_all(const BYTE* data, const SIZETYPE size) {
 
 
 inline void uart2_tx_str(const char* strzero) {
-	SIZETYPE len = strsize(strzero);
+	SIZETYPE len = mi_strlen(strzero);
 	uart2_tx_all((const BYTE*) strzero, len);
 }
 
 
-inline OP_RESULT uart2_tx_buf(ByteBuf* data) {
-	SIZETYPE size = bb_unread_size(data);
-	OP_RESULT result =  uart2_tx(data->data, size);
-	if (OPR_OK == result) { data->rIndex += size; }
-	return result;
+inline SIZETYPE uart2_tx_buf(ByteBuf* data) {
+	SIZETYPE bytes_to_tx = bb_unread_size(data);
+	if (bytes_to_tx > uart2.txbuf_free_space) {
+		bytes_to_tx = uart2.txbuf_free_space;
+	}
+	OP_RESULT result =  uart2_tx(data->data, bytes_to_tx);
+	if (OPR_OK == result) { data->rIndex += bytes_to_tx; }
+	return bytes_to_tx;
 }
 
 

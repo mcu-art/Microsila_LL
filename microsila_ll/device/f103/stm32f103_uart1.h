@@ -81,7 +81,7 @@ extern inline BOOL uart1_txbuf_can_fit(const SIZETYPE size);
 // Transmit byte array of required size, this function doesn't block;
 // If the size is greater than free space in txbuf,
 // no data is copied or transmitted;
-// Return value: OPR_OK if success or OPR_NOT_ENOUGH_SPACE otherwise.
+// Return value: OPR_OK if success or OPR_OUT_OF_SPACE otherwise.
 // It is safe to call this function at any time from main().
 extern OP_RESULT uart1_tx(const BYTE* data, const SIZETYPE size); 
 
@@ -98,9 +98,9 @@ extern void uart1_tx_all(const BYTE* data, const SIZETYPE size);
 extern inline void uart1_tx_str(const char* strzero); 
 
 // Convenience function to transmit data from ByteBuf;
-// Return value: OPR_OK if success or OPR_NOT_ENOUGH_SPACE otherwise.
+// Returns: number of bytes transmitted.
 // It is safe to call at any time from main().
-extern inline OP_RESULT uart1_tx_buf(ByteBuf* data);
+extern inline SIZETYPE uart1_tx_buf(ByteBuf* data);
 
 // Transmit data from the byte buffer, all data is guaranteed to be transmitted.
 // This function will block

@@ -8,6 +8,11 @@
 #include "microsila_ll/core/utils.c"
 #include "microsila_ll/core/crc.c"
 
+/* Tests */
+#include "tests/blue_pill/core_test/Src/test/byte_buf_test.c"
+#include "tests/blue_pill/core_test/Src/test/crc_test.c"
+#include "tests/blue_pill/core_test/Src/test/utils_test.c"
+
 /* Device-specific */
 
 
