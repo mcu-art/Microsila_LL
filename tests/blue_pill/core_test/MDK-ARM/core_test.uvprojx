@@ -458,6 +458,11 @@
               <FileType>5</FileType>
               <FilePath>..\Src\test\utils_test.h</FilePath>
             </File>
+            <File>
+              <FileName>dbg_console_test.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\Src\test\dbg_console_test.c</FilePath>
+            </File>
           </Files>
         </Group>
         <Group>

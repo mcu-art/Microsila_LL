@@ -4,8 +4,8 @@
 */
 
 
-#ifndef _BYTE_BUF_H
-#define _BYTE_BUF_H
+#ifndef BYTE_BUF_H
+#define BYTE_BUF_H
 
 
 #ifdef __cplusplus
@@ -30,11 +30,10 @@ typedef struct {
   ByteBuf* _BUFNAME = bb_init(_BUFNAME_arr, _BUFSIZE);
 
 
-/* 	Init byte buffer; memblock must be externally allocated;
-data_size: actual data size of the ByteBuf; 
-           Note that it is smaller than memblock size and
-           must be equal to (sizeof(memblock) - sizeof(ByteBuf))
-*/
+// Init byte buffer; memblock must be externally allocated;
+// data_size: actual data size of the ByteBuf;
+// Note that it must be smaller than the memblock size,
+// data_size =  (sizeof(memblock) - sizeof(ByteBuf))
 extern ByteBuf* bb_init(BYTE* memblock, const SIZETYPE data_size);
 
 /* 	Reset readerIndex and writerIndex */
@@ -90,11 +89,11 @@ extern void bb_transfer(ByteBuf* src, ByteBuf* dest);
 */
 extern SIZETYPE bb_compact(ByteBuf* inst);
 
-// The purpose of this function is to minimize unnecessary data copying in case
-// producer fills data with big chunks, while consumer reads small chunks;
+// The purpose of this function is to minimize excessive data copying in case
+// producer writes big chunks, while consumer reads small chunks data;
 // This function is better to use immediately before producer writes data to the byte buffer;
 // Compact only if:
-//   * rIndex and wIndex are equal (low-cost compact)
+//   * rIndex and wIndex are equal (low-cost reset-compact)
 //   * available free space is less than 'min_size_to_fit' (reluctant high-cost compact)
 // otherwise do not compact;
 // Return: number of freed bytes
@@ -103,7 +102,6 @@ extern SIZETYPE bb_lazy_compact(ByteBuf* inst, const SIZETYPE min_size_to_fit);
 #ifdef __cplusplus
 }
 #endif
-
 
 #endif
 

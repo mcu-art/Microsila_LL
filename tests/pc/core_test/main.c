@@ -2,6 +2,9 @@
 #include <tests/blue_pill/core_test/Src/test/byte_buf_test.h>
 #include <tests/blue_pill/core_test/Src/test/crc_test.h>
 #include <tests/blue_pill/core_test/Src/test/utils_test.h>
+#include <tests/blue_pill/core_test/Src/test/dbg_console_test.h>
+
+
 
 void print_result(const char* test_name, OP_RESULT result) {
     const char* res_desc;
@@ -27,6 +30,7 @@ int main()
    print_result("ByteBuf tests", bb_test_all());
    print_result("CRC tests", crc_test_all());
    print_result("UTILS tests", utils_test_all());
+   print_result("DBG_CONSOLE tests", dbg_console_test_all());
 
     return 0;
 }

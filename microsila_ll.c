@@ -7,7 +7,7 @@
 #include "microsila_ll/core/byte_buf.c"
 #include "microsila_ll/core/utils.c"
 #include "microsila_ll/core/crc.c"
-
+#include "microsila_ll/core/dbg_console.c"
 /* Device-specific */
 
 

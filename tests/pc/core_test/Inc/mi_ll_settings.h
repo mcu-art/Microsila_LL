@@ -1,9 +1,29 @@
 #ifndef MI_LL_SETTINGS_H
 #define MI_LL_SETTINGS_H
+#include <microsila_ll/device/mi_device_list.h>
 #include <microsila_ll/core/data_types.h>
 
-/* Hardware configuration */
+// 16..64-bit SIZETYPES can be defined
+// 32-bit SIZETYPE seems to be the most efficient for STM32
 #define SIZETYPE uint32_t
+
+// NOTE: BUFFER SIZES MUST BE DIVISIBLE BY 4 IN ORDER TO ALIGN DATA PROPERLY;
+// NOT COMPLYING TO THIS RULE MAY LEAD TO BUGS THAT ARE DIFFICULT TO FIND
+
+/* SOFTWARE MODULES BEGIN */
+// Uncomment to use debug console to print text messages
+// via uart on MCU or stdio on PC
+
+#define USE_DBG_CONSOLE
+
+// Define UART to be used by debug console;
+// This has no effect on PC
+
+//#define DBG_CONSOLE_UART uart2
+
+/* SOFTWARE MODULES END */
+
+
 
 
 /* DEVICE SECTION BEGIN */

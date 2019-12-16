@@ -26,10 +26,12 @@
 #include <microsila_ll/core/utils.h>
 #include <microsila_ll/core/byte_buf.h>
 #include <microsila_ll/periph/uarts.h>
+#include <microsila_ll/core/dbg_console.h>
 #include "user/leds.h"
 #include "test/byte_buf_test.h"
 #include "test/crc_test.h"
 #include "test/utils_test.h"
+#include "test/dbg_console_test.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -308,7 +310,7 @@ static uint32_t sprintf_float_perf_test(void) {
 	uint32_t start_ts = systicks;
 	for (uint16_t i=0; i<ITERATIONS; ++i) {
 		for (uint16_t z=0; z<ARRLEN(flarray); ++z) {
-			sprintf(buffer, "%f", flarray[z]);
+			sprintf(buffer, "Test %3f", flarray[z]);
 		}
 	}		
 	return (systicks - start_ts) / 40;
@@ -324,14 +326,15 @@ static uint32_t sprintf_int_perf_test(void) {
 	uint32_t start_ts = systicks;
 	for (uint16_t i=0; i<ITERATIONS; ++i) {
 		for (uint16_t z=0; z<ARRLEN(intarray); ++z) {
-			sprintf(buffer, "%d", intarray[z]);
+			sprintf(buffer, "Test %d", intarray[z]);
 		}
 	}		
 	return (systicks - start_ts) / 40;
 }
 
 
-static uint32_t float_to_str_perf_test(void) {
+
+static uint32_t mi_printf_float_perf_test(void) {
 	
 	BB_CREATE(buf, 64);
 	const uint32_t ITERATIONS = 100;
@@ -340,7 +343,7 @@ static uint32_t float_to_str_perf_test(void) {
 	uint32_t start_ts = systicks;
 	for (uint16_t i=0; i<ITERATIONS; ++i) {
 		for (uint16_t z=0; z<ARRLEN(flarray); ++z) {
-			float_to_str(flarray[z], 4, buf);
+			mi_fmt_str(buf, "Test %3f", flarray[z]);
 			bb_reset(buf);
 		}
 	}		
@@ -348,7 +351,8 @@ static uint32_t float_to_str_perf_test(void) {
 }
 
 
-static uint32_t uint32_to_str_perf_test(void) {
+
+static uint32_t mi_printf_int_perf_test(void) {
 	
 	BB_CREATE(buf, 64);
 	const uint32_t ITERATIONS = 100;
@@ -357,7 +361,7 @@ static uint32_t uint32_to_str_perf_test(void) {
 	uint32_t start_ts = systicks;
 	for (uint16_t i=0; i<ITERATIONS; ++i) {
 		for (uint16_t z=0; z<ARRLEN(intarray); ++z) {
-			int32_to_str(intarray[z], buf);
+			mi_fmt_str(buf, "Test %d", intarray[z]);
 			bb_reset(buf);
 		}
 	}		
@@ -365,68 +369,48 @@ static uint32_t uint32_to_str_perf_test(void) {
 }
 
 
+
+
 static void _main_routine(void) {
 	
-	BB_CREATE(dbuf, 64);
-	
+
 	led_signal_disable();
 	uart2_enable();
-	
+
 	uint32_t start = systicks;
 	
-	
-	uart2_tx_str("Microsila_LL core test started. ");
+	dc_print("Microsila_LL core test started. \n");
 	
 	// Some performance tests
 	uint32_t elapsed_sprintf = sprintf_float_perf_test();
-	uint32_t elapsed_utils = float_to_str_perf_test();
-	bb_append_str(dbuf, "sprintf_perf_test: ");
-	uint32_to_str(elapsed_sprintf, dbuf);
-	bb_append_str(dbuf, " millisec. ");
-  uart2_tx_buf_all(dbuf);
-	bb_reset(dbuf);
+	uint32_t elapsed_utils = mi_printf_float_perf_test();
 	
-	bb_append_str(dbuf, "float_to_str_perf_test: ");
-	uint32_to_str(elapsed_utils, dbuf);
-	bb_append_str(dbuf, " millisec. ");
-	uart2_tx_buf_all(dbuf);
-	bb_reset(dbuf);
-	
-	
-	
+	dc_printf("sprintf_float_perf_test: %d millisec. \n", elapsed_sprintf);
+	dc_printf("mi_printf_float_perf_test: %d millisec. \n", elapsed_utils);
 	elapsed_sprintf = sprintf_int_perf_test();
-	elapsed_utils = uint32_to_str_perf_test();
+	elapsed_utils = mi_printf_int_perf_test();
 	
-	bb_append_str(dbuf, "sprintf_int_perf_test: ");
-	uint32_to_str(elapsed_sprintf, dbuf);
-	bb_append_str(dbuf, " millisec. ");
-  uart2_tx_buf_all(dbuf);
-	bb_reset(dbuf);
+	dc_printf("sprintf_int_perf_test: %d millisec. \n", elapsed_sprintf);
+	dc_printf("mi_printf_int_perf_test: %d millisec. \n", elapsed_utils);
 	
-	bb_append_str(dbuf, "uint32_to_str_perf_test: ");
-	uint32_to_str(elapsed_utils, dbuf);
-	bb_append_str(dbuf, " millisec. ");
-	uart2_tx_buf_all(dbuf);
-	bb_reset(dbuf);
 	
-
 	halt_on_error(utils_test_all());
 	halt_on_error(bb_test_all());
 	halt_on_error(crc_test_all());
+	halt_on_error(dbg_console_test_all());
 	
 	
-	bb_reset(dbuf);
-	bb_append_str(dbuf, "Tests complete in  ");
-	uint32_to_str( (systicks - start) / 40 , dbuf);
-	bb_append_str(dbuf, " millisecond(s).");
-  uart2_tx_buf_all(dbuf);
+	dc_printf("Tests complete in  %d  millisecond(s).\n", (systicks - start) / 40);
 	
 	visualize_result(OPR_OK);
 
 	// Reset function stops ongoing transfers and clears all buffers,
 	// so that previous operation does not affect next one;
 	
-	while (TRUE) { delay(1); uart2_do_processing(); }
+	while (TRUE) { 
+		delay(1); 
+		//uart2_do_processing(); 
+	}
 	
 }
 

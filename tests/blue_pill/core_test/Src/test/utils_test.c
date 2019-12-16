@@ -1,15 +1,12 @@
 
 #include "utils_test.h"
-#include "microsila_ll/core/test_helpers.h"
-#include "microsila_ll/core/byte_buf.h"
+#include <microsila_ll/core/test_helpers.h>
+#include <microsila_ll/core/byte_buf.h>
+#include <microsila_ll/core/dbg_console.h>
 
 #include <float.h>
 #include <stdarg.h>
 
-// DEBUG
-#if MI_DEVICE == PC
-#include <stdio.h>
-#endif
 
 /* MACRO TESTS BEGIN */
 		
@@ -90,18 +87,18 @@ OP_RESULT almost_equal_floats_test(void) {
 /* double */
 OP_RESULT double_to_int64_test(void) {
 	OP_RESULT result = OPR_OK;
-	CHECK (double_to_int64(1.0) == 0x3ff0000000000000ULL);
-	CHECK (double_to_int64(-100.25) == 0xc059100000000000ULL);
+    CHECK (double_to_int64(1.0) == 0x3ff0000000000000LL);
+    CHECK (double_to_int64(-100.25) == 0xc059100000000000LL);
 	return result;
 }
 
 
 OP_RESULT int64_to_double_test(void) {
 	OP_RESULT result = OPR_OK;
-	CHECK (int64_to_double(0x3ff0000000000000ULL) == 1.0);
-	CHECK (int64_to_double(0xc059100000000000ULL) == -100.25);
+    CHECK (int64_to_double(0x3ff0000000000000LL) == 1.0);
+    CHECK (int64_to_double(0xc059100000000000LL) == -100.25);
 	CHECK (int64_to_double(0x0ULL) == 0.0);
-	CHECK (int64_to_double(0x8000000000000000ULL) == -0.0);
+    CHECK (int64_to_double(0x8000000000000000LL) == -0.0);
 	return result;
 }
 
@@ -113,7 +110,7 @@ OP_RESULT ulps_distance_double_test(void) {
 	CHECK (ulps_distance_double(1.0, (1.0 + DBL_EPSILON)) == 1);
 	CHECK (ulps_distance_double(1.0, (1.0 - DBL_EPSILON)) == 2);
         double a_inf = int64_to_double(0x7f80000000000000ULL);
-        double b_minus_inf = int64_to_double(0xff80000000000000ULL);
+        double b_minus_inf = int64_to_double(0xff80000000000000LL);
 	CHECK (ulps_distance_double(a_inf, b_minus_inf) == 0x7FFFFFFFFFFFFFFFULL);
 	return result;
 }
@@ -242,6 +239,12 @@ OP_RESULT float_to_str_test(void) {
 	CHECK (bb_unread_size(buf) == 3);
 	CHECK (mi_memcmp(buf->data, (const BYTE*) "0.0", 3));
 	bb_reset(buf);
+
+    f = -0.1f;
+    float_to_str(f, 4, buf);
+    CHECK (bb_unread_size(buf) == 4);
+    CHECK (mi_memcmp(buf->data, (const BYTE*) "-0.1", 4));
+    bb_reset(buf);
 	
 	f = 6.22e23f;
 	float_to_str(f, 4, buf);
@@ -253,6 +256,11 @@ OP_RESULT float_to_str_test(void) {
 	float_to_str(d, 5, buf);
 	CHECK (mi_memcmp(buf->data, (const BYTE*) "10.62258", 8));
 	bb_reset(buf);
+
+    d = .2577;
+    float_to_str(d, 3, buf);
+    CHECK (mi_memcmp(buf->data, (const BYTE*) "0.258", 5));
+    bb_reset(buf);
 	
 	float_to_str(-1000000000.99, 5, buf);
 	CHECK (mi_memcmp(buf->data, (const BYTE*) "-1000000000.99", 13));
@@ -268,31 +276,6 @@ OP_RESULT float_to_str_test(void) {
 	
 	return result;
 }
-
-
-
-
-OP_RESULT mi_fmt_str_find_placeholder_test(void) {
-	extern BOOL mi_fmt_str_find_placeholder(const char*, const SIZETYPE, MiFmtStrPhDesc*);
-
-	OP_RESULT result = OPR_OK;
-	MiFmtStrPhDesc ph;
-	
-	CHECK (FALSE == mi_fmt_str_find_placeholder("", 0, &ph));
-	CHECK (FALSE == mi_fmt_str_find_placeholder("test", 4, &ph));
-	CHECK (TRUE == mi_fmt_str_find_placeholder("%dtest", sizeof("%dtest"), &ph));
-	CHECK ( (ph.pos == 0) && (ph.len == 2) && (ph.type == 'd') && (ph.param == 0));
-	
-	CHECK (TRUE == mi_fmt_str_find_placeholder("test%3f", sizeof("test%3f"), &ph));
-	CHECK ((ph.pos == 4) && (ph.len == 3) && (ph.type == 'f') && (ph.param == 3));
-	
-	CHECK (FALSE == mi_fmt_str_find_placeholder("test%3", sizeof("test%3"), &ph));
-	CHECK (FALSE == mi_fmt_str_find_placeholder("test%", sizeof("test%"), &ph));
-  CHECK (TRUE == mi_fmt_str_find_placeholder("test%%", sizeof("test%%"), &ph));
-	
-	return result;
-}
-
 
 
 OP_RESULT byte_to_hex_str_test(void) {
@@ -422,34 +405,42 @@ OP_RESULT var_arg_func_test(void) {
 	return result;
 }
 
-#if MI_DEVICE == PC
-void dbg_print_buf(ByteBuf* buf) {
 
-    static char tmpbuf[1024];
+OP_RESULT mi_fmt_str_find_placeholder_test(void) {
+    extern BOOL mi_fmt_str_find_placeholder(const char*, const SIZETYPE, MiFmtStrPhDesc*);
 
-    BOOL is_ok = ( (buf->rIndex <= buf->size) && (buf->rIndex <= buf->wIndex)
-                   && (buf->wIndex <= buf->size));
-    printf("* ByteBuf(size = %d): %s\n", buf->size, (is_ok) ? "ok": "index_error");
-    printf("  * read: %d, write: %d\n", buf->rIndex, buf->wIndex);
-    SIZETYPE size = bb_unread_size(buf);
-    if (size > sizeof(tmpbuf) - 1) {
-      size  = sizeof(tmpbuf) - 1;
-    }
-    mi_memcpy(buf->data, tmpbuf, size);
-    tmpbuf[size] = 0;
+    OP_RESULT result = OPR_OK;
+    MiFmtStrPhDesc ph;
 
-    printf("  * Data: '%s'\n", tmpbuf);
+    CHECK (FALSE == mi_fmt_str_find_placeholder("", 0, &ph));
+    CHECK (FALSE == mi_fmt_str_find_placeholder("test", 4, &ph));
+    CHECK (TRUE == mi_fmt_str_find_placeholder("%dtest", sizeof("%dtest"), &ph));
+    CHECK ( (ph.pos == 0) && (ph.len == 2) && (ph.type == 'd') && (ph.param == 0));
+
+    CHECK (TRUE == mi_fmt_str_find_placeholder("test%3f", sizeof("test%3f"), &ph));
+    CHECK ((ph.pos == 4) && (ph.len == 3) && (ph.type == 'f') && (ph.param == 3));
+
+    CHECK (FALSE == mi_fmt_str_find_placeholder("test%3", sizeof("test%3"), &ph));
+    CHECK (FALSE == mi_fmt_str_find_placeholder("test%", sizeof("test%"), &ph));
+  CHECK (TRUE == mi_fmt_str_find_placeholder("test%%", sizeof("test%%"), &ph));
+
+    return result;
 }
-
-#endif
 
 
 OP_RESULT mi_fmt_str_test(void) {
 	extern BOOL mi_fmt_str_find_placeholder(const char*, const SIZETYPE, MiFmtStrPhDesc*);
 
 	OP_RESULT result = OPR_OK;
-	BB_CREATE(buf, 64);
-	
+    BB_CREATE(buf, 80);
+
+    bb_reset(buf);
+    CHECK (OPR_OK == mi_fmt_str(buf, "* ByteBuf(size = %d):", 3));
+    CHECK (bb_unread_size(buf) == sizeof("* ByteBuf(size = 3):") - 1);
+    CHECK (mi_memcmp(buf->data, (const BYTE*) "* ByteBuf(size = 3):",
+                     sizeof("* ByteBuf(size = 3):") - 1));
+
+
 	bb_reset(buf);
 	CHECK (OPR_OK == mi_fmt_str(buf, ""));
 	CHECK (buf->rIndex == 0);
@@ -499,6 +490,27 @@ OP_RESULT mi_fmt_str_test(void) {
         CHECK (bb_unread_size(buf) == sizeof("test A2B3C4D") - 1);
         CHECK (mi_memcmp(buf->data, (const BYTE*) "test A2B3C4D", sizeof("test A2B3C4D") - 1));
 	
+        bb_reset(buf);
+        CHECK (OPR_OK == mi_fmt_str(buf, "test %s", "ok"));
+        CHECK (bb_unread_size(buf) == sizeof("test ok") - 1);
+        CHECK (mi_memcmp(buf->data, (const BYTE*) "test ok", sizeof("test ok") - 1));
+
+        bb_reset(buf);
+        CHECK (OPR_OK == mi_fmt_str(buf, "#%d. test %s received, %3f apples eaten",
+                                    1, "the message", 0.535));
+        CHECK (mi_memcmp(buf->data,
+                         (const BYTE*) "#1. test the message received, 0.535 apples eaten",
+                          sizeof("#1. test the message received, 0.535 apples eaten") - 1));
+        bb_reset(buf);
+        CHECK (OPR_OK == mi_fmt_str(buf, "%d %s, %d %s, %d %s, fraction: %5f, hex code: %1x",
+                                    1, "apple", 2, "plums",
+                                    3, "water melons",
+                                    0.535, 0x445577));
+        CHECK (mi_memcmp(buf->data,
+                         (const BYTE*) "1 apple, 2 plums, 3 water melons, fraction: 0.535, hex code: 00445577",
+                          sizeof("1 apple, 2 plums, 3 water melons, fraction: 0.535, hex code: 00445577") - 1));
+
+
 	return result;
 }
 
@@ -529,10 +541,12 @@ OP_RESULT set_reset_bit_uint8_test(void) {
 OP_RESULT utils_test_all(void) {
 	
 	
-  const uint32_t ITERS = 100;
+  const uint32_t ITERS = 1000;
 	OP_RESULT r; 
 	
-        
+    DO_TEST(mi_fmt_str_test, ITERS);
+
+
 	DO_TEST(macro_test, ITERS);
 	 
 	DO_TEST(mi_strlen_test, ITERS);
@@ -552,10 +566,10 @@ OP_RESULT utils_test_all(void) {
 	DO_TEST(byte_to_hex_str_test, ITERS);
 	
 	DO_TEST(var_arg_func_test, ITERS);
-        DO_TEST(mi_fmt_str_test, ITERS);
+
         DO_TEST(uint32_to_hex_str_test, ITERS);
 
-	
+    /**/
 
 	return OPR_OK;
 }

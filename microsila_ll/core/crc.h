@@ -2,8 +2,12 @@
 /* Crc calculation */
 
 
-#ifndef _CRC_H
-#define _CRC_H
+#ifndef MI_CRC_H
+#define MI_CRC_H
+
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 #include <mi_ll_settings.h>
 #include "data_types.h"
@@ -46,5 +50,8 @@ extern inline BOOL crc32_equal(const uint8_t* data, SIZETYPE size, const uint32_
 
 
 
+#ifdef __cplusplus
+}
+#endif
 
 #endif

@@ -4,21 +4,45 @@ Utility functions
 */
 
 
-#ifndef _UTILS_H
-#define _UTILS_H
+#ifndef MI_UTILS_H
+#define MI_UTILS_H
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 
 #include <mi_ll_settings.h>
 #include "data_types.h"
 #include "byte_buf.h"
 
 
-/* Macros */
+/* MACROS SECTION BEGIN */
 
 // Get the array length
 #define ARRLEN(_ARR) (sizeof(_ARR) / sizeof(_ARR[0]))
 
 // Get the last element of the array
 #define LAST_ELEM(_ARR) (_ARR[ARRLEN(_ARR)-1])
+
+// See https://stackoverflow.com/a/5256500/3824328  for concatenating macros
+// Concatenate preprocessor tokens A and B without expanding macro definitions
+// (however, if invoked from a macro, macro arguments are expanded).
+#define PPCAT_NX(A, B) A ## B
+
+// Concatenate preprocessor tokens A and B after macro-expanding them.
+#define PPCAT(A, B) PPCAT_NX(A, B)
+
+// Turn A into a string literal without expanding macro definitions
+// (however, if invoked from a macro, macro arguments are expanded).
+#define STRINGIZE_NX(A) #A
+
+//Turn A into a string literal after macro-expanding it.
+#define STRINGIZE(A) STRINGIZE_NX(A)
+
+
+/* MACROS SECTION END */
+
 
 // Make uint16_t out of two bytes
 extern inline uint16_t bytes_to_uint16(uint16_t msb, uint16_t lsb);
@@ -110,9 +134,9 @@ extern void float_to_str(double d, uint8_t digits_after_dp, ByteBuf* output);
 
 // Format zero-terminated string;
 // This is very light-weight analog of sprintf;
-// Supports only %d, %f and %x placeholders; 
+// Supports only %d, %f, %s and %x placeholders;
 extern OP_RESULT mi_fmt_str(ByteBuf* output, const char* s, ...);
-#define MI_FMT_STR_MAX_ARGS  5  // how many additional arguments may mi_fmt_str receive
+
 
 // Internal usage only
 typedef struct {
@@ -121,5 +145,10 @@ typedef struct {
 	BYTE len;
 	BYTE param;
 } MiFmtStrPhDesc;
+
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif

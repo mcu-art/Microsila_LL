@@ -4,14 +4,9 @@
 #include <math.h>
 #include <float.h>
 #include <stdarg.h>
-//#include <../Src/user/leds.h>
-
-#if MI_DEVICE == PC
-#include <stdio.h> // DEBUG
-#endif
 
 inline uint16_t bytes_to_uint16(uint16_t msb, uint16_t lsb){
-	uint16_t result = msb << 8;
+    uint16_t result =  (uint16_t) (msb <<  8);
 	return result |= lsb;
 }
 
@@ -34,7 +29,7 @@ int32_t ulps_distance_float(float a, float b)
 {
     // Save work if the floats are equal.
     // Also handles +0 == -0
-    if (a == b) return 0;
+    if (a == b) return 0; // intended comparison of floats
 
     static const int32_t max = INT32_MAX;
 
@@ -62,7 +57,7 @@ int32_t ulps_distance_float(float a, float b)
 BOOL almost_equal_floats(float a, float b, float tolerance) {
 	#define FLOAT_ULPS_EPSILON  4
 	// Handle the near-zero case
-        const float difference = (float) fabs(a - b);
+    const float difference = (float) fabs(a - b);
 	if (difference <= tolerance) return TRUE;
 
 	return ulps_distance_float(a, b) <= FLOAT_ULPS_EPSILON;
@@ -84,7 +79,7 @@ inline double int64_to_double(int64_t i) {
 // returns absolute value of ulps
 int64_t ulps_distance_double(double a, double b)
 {
-	if (a == b) return 0;
+    if (a == b) return 0; // intended comparison of doubles
 	static const int64_t max = INT64_MAX;
 
 	// Max distance for NaN
@@ -242,16 +237,18 @@ void uint32_to_str(uint32_t num, ByteBuf* output) {
 	BOOL first_non_zero_digit_found = FALSE;
 	for (uint32_t div = 1000000000; div >= 10; div /= 10) {
 		d = num / div;
-		if (d) { bb_write_byte_if_fits(output, (d + '0')); first_non_zero_digit_found = TRUE; }
+        if (d) {
+            bb_write_byte_if_fits(output, (BYTE) (d + '0'));
+            first_non_zero_digit_found = TRUE; }
 		else { 
 			if (first_non_zero_digit_found) {
-				bb_write_byte_if_fits(output, (d + '0'));} 
+                bb_write_byte_if_fits(output, (BYTE) (d + '0'));}
 		} 
 		// write zero in the middle
 		num -= d * div;
 	}
 	// last digit must be written anyway
-	bb_write_byte_if_fits(output, (num + '0'));
+    bb_write_byte_if_fits(output, (BYTE) (num + '0'));
 }
 
 
@@ -260,7 +257,7 @@ void int32_to_str(int32_t num, ByteBuf* output) {
 		bb_write_byte_if_fits(output, '-');
 		num = (~num) + 1;
 	}
-	uint32_to_str(num, output);
+    uint32_to_str((uint32_t) num, output);
 }
 
 
@@ -369,13 +366,8 @@ void float_to_str(double d, uint8_t digits_after_dp, ByteBuf* output) {
     }
 
     uint32_t intpart = (uint32_t) d;
-    if (!intpart) {
-            bb_append_str(output, "0.0");
-            return;
-    }
 
     // prepare fractional part
-	
     d -= intpart; // remove integral part from d
 
     uint32_t mult = 1;
@@ -391,7 +383,7 @@ void float_to_str(double d, uint8_t digits_after_dp, ByteBuf* output) {
 
     if ((d - fract_intpart) >= 0.5) {  // round up
             ++fract_intpart;
-            // if only one digit after dp, round up to integral part
+            // increase integral part if threre is only one digit after dp
             if (digits_after_dp == 1) { ++intpart; }
     }
 
@@ -424,7 +416,7 @@ void float_to_str(double d, uint8_t digits_after_dp, ByteBuf* output) {
 }
 
 
-inline BOOL is_dec_digit(const char c) {
+static inline BOOL is_dec_digit(const char c) {
     return ((c>='0') && (c<='9')) ? TRUE: FALSE;
 }
 
@@ -434,6 +426,7 @@ static inline BOOL is_fmt_supported(const char c) {
         case 'd':
         case 'f':
         case 'x':
+        case 's':
         case '%':
             return TRUE;
         default:
@@ -441,24 +434,30 @@ static inline BOOL is_fmt_supported(const char c) {
     };
 }
 
+//static uint32_t count = 0;
 
 // If placeholder found in string, fill in the `ph` struct
 // Return: TRUE if found, FALSE otherwise
 BOOL mi_fmt_str_find_placeholder(const char* s, const SIZETYPE len, MiFmtStrPhDesc* ph) {
+    //count++;
+    //printf("Count: %d\n", count);
+    //printf("String: '%s'\n", s);
+    //printf("Provided len: %d\n", len);
+
 	for (SIZETYPE i = 0; i<len; ++i) {
 		if (s[i] == '%') {
 			if (i == (len-1)) { return FALSE; } // '%' at the end of the string
 			if (is_dec_digit(s[i+1])) { // parse num of digits
 				if (i == (len-2)) { return FALSE; }
 				if (is_fmt_supported(s[i+2])) {
-					ph->type = s[i+2];
-					ph->param = s[i+1] - '0';
+                    ph->type = (BYTE) s[i+2];
+                    ph->param = (BYTE) s[i+1] - '0';
 					ph->len = 3;
 					ph->pos = i;
 					return TRUE;
 				}
 			} else if (is_fmt_supported(s[i+1])) {
-				ph->type = s[i+1];
+                ph->type = (BYTE) s[i+1];
 				ph->param = 0;
 		    ph->len = 2;
 				ph->pos = i;
@@ -471,7 +470,67 @@ BOOL mi_fmt_str_find_placeholder(const char* s, const SIZETYPE len, MiFmtStrPhDe
 	return FALSE;
 }
 
+OP_RESULT mi_vfmt_str(ByteBuf* output, const char* s, va_list args) {
+    OP_RESULT result = OPR_OK;
 
+    const SIZETYPE len = mi_strlen(s);
+    SIZETYPE start_index = 0;
+    int32_t iarg;
+    double farg;
+    const char *strarg;
+
+    MiFmtStrPhDesc ph;
+
+    // Find all placeholders in the string
+    while (mi_fmt_str_find_placeholder(s + start_index, len - start_index, &ph)) {
+
+        // add part before the placeholder
+        bb_append_array_if_fits(output, (const BYTE*) (s + start_index), ph.pos);
+
+        // replace placeholder
+        switch (ph.type) {
+            case 'd':
+                iarg = va_arg(args, int32_t);
+                int32_to_str(iarg, output);
+                break;
+            case 'f':
+                farg = va_arg(args, double);
+                float_to_str(farg, ph.param, output);
+                break;
+            case 'x':
+                iarg = va_arg(args, int32_t);
+                uint32_to_hex_str((uint32_t) iarg, output, ph.param);
+                break;
+            case 's':
+                strarg = va_arg(args, const char*);
+                bb_append_str(output, strarg);
+                break;
+            case '%':
+                bb_write_byte_if_fits(output, '%');
+                break;
+        }
+        // advance start_index
+        SIZETYPE new_index = start_index + ph.pos + ph.len;
+                if (new_index > len) { break; }
+        start_index = new_index;
+    }
+
+    // add the rest of string
+    bb_append_str(output, (s + start_index));
+    return result;
+}
+
+
+OP_RESULT mi_fmt_str(ByteBuf* output, const char* s, ...) {
+    OP_RESULT result;
+    va_list args;
+    va_start(args, s);
+    result = mi_vfmt_str(output, s, args);
+    va_end(args);
+    return result;
+}
+
+/*
 OP_RESULT mi_fmt_str(ByteBuf* output, const char* s, ...) {
 	OP_RESULT result = OPR_OK;
 	va_list args; 
@@ -481,34 +540,34 @@ OP_RESULT mi_fmt_str(ByteBuf* output, const char* s, ...) {
 	SIZETYPE start_index = 0;
 	int32_t iarg;
 	double farg;
+    const char *strarg;
 	
 	MiFmtStrPhDesc ph;
 
-        uint32_t dbg_count = 0;
-
 	// Find all placeholders in the string
 	while (mi_fmt_str_find_placeholder(s + start_index, len - start_index, &ph)) {
-#if MI_DEVICE == PC
-              dbg_count++;
-              //printf("I: %d, looking for placeholders in: '%s'\n", dbg_count, s + start_index);
-#endif
+
 		// add part before the placeholder
 		bb_append_array_if_fits(output, (const BYTE*) (s + start_index), ph.pos);
 		
 		// replace placeholder
 		switch (ph.type) {
 			case 'd':
-                                iarg = va_arg(args, int32_t);
+                iarg = va_arg(args, int32_t);
 				int32_to_str(iarg, output);
 				break;
 			case 'f':
-                                farg = va_arg(args, double);
+                farg = va_arg(args, double);
 				float_to_str(farg, ph.param, output);
 				break;
 			case 'x':
-                                iarg = va_arg(args, int32_t);
-                                uint32_to_hex_str(iarg, output, ph.param);
+                iarg = va_arg(args, int32_t);
+                uint32_to_hex_str((uint32_t) iarg, output, ph.param);
 				break;
+            case 's':
+                strarg = va_arg(args, const char*);
+                bb_append_str(output, strarg);
+                break;
 			case '%':
 				bb_write_byte_if_fits(output, '%');
 				break;
@@ -520,12 +579,16 @@ OP_RESULT mi_fmt_str(ByteBuf* output, const char* s, ...) {
 	}
 	
 	// add the rest of string
-	bb_append_array_if_fits(output, (const BYTE*) s, (len - start_index));
+    //printf("Appending from index %d, '%s'\n", start_index, (const BYTE*) (s + start_index));
+    bb_append_str(output, (s + start_index));
 	
 	va_end(args);
 	
 	return result;
 	
 }
+*/
+
+
 
 
