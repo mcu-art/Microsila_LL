@@ -153,7 +153,7 @@ BOOL mi_strcmp(const char* first, const char* sec) {
 }
 
 
-BOOL mi_memequal(const uint8_t* data, SIZETYPE size, const BYTE val) {
+BOOL mi_memequal(const uint8_t* data, const SIZETYPE size, const BYTE val) {
 	const uint8_t* to = data + size;
 	while (data != to) {
 		if (*data != val) { return FALSE; }

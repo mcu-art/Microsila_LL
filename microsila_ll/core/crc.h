@@ -12,23 +12,7 @@ extern "C" {
 #include <mi_ll_settings.h>
 #include "data_types.h"
 
-
-
-/* 16-bit xor */
-// Xor-16 is a 16-bit exclusive OR of data used by some external modules 
-// to check data integrity;
-// Even though it is less reliable than crc-32, the computation cost is much
-// lower especially for 8-bit devices.
-
-// Calculate 16-bit xor
-extern uint16_t xor16(const BYTE* data, SIZETYPE size);
-
-// Check if 16-bit xor of data is equal to the provided xor16;
-// size: must be divisible by 2
-// Returns: TRUE if equal
-extern inline BOOL xor16_equal(const BYTE* data, SIZETYPE size, const uint16_t* xor16_val);
-
-
+	
 /* Standart 32-bit crc 
  	 * @descr:  Standart 32-bit crc with 
 							ethernet polynomial 0x4C11DB7 (reversed value is 0xEDB88320). 
@@ -47,6 +31,21 @@ extern uint32_t crc32(const uint8_t* data, SIZETYPE size, uint32_t previous_crc3
 
 // Check if crc-32 of the data is equal to crc32_val
 extern inline BOOL crc32_equal(const uint8_t* data, SIZETYPE size, const uint32_t* crc32_val);
+
+
+/* 16-bit xor */
+// Xor-16 is a 16-bit exclusive OR of data used by some external modules 
+// to check data integrity;
+// Even though it is less reliable than crc-32, the computation cost is much
+// lower especially for 8-bit devices.
+
+// Calculate 16-bit xor
+extern uint16_t xor16(const BYTE* data, SIZETYPE size);
+
+// Check if 16-bit xor of data is equal to the provided xor16;
+// size: must be divisible by 2
+// Returns: TRUE if equal
+extern inline BOOL xor16_equal(const BYTE* data, SIZETYPE size, const uint16_t* xor16_val);
 
 
 

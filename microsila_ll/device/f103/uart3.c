@@ -1,12 +1,13 @@
 
 #include "hw_desc.h"
-#include "uart3.h"
+#include "../../periph/uart3.h"
+#include "../../periph/uarts_priv.h"
 #include "stm32f1xx_ll_usart.h"
 #include "stm32f1xx_ll_dma.h"
 #include "stm32f1xx_ll_gpio.h"
 #include "stm32f1xx_ll_bus.h"
 #include "../../core/utils.h"
-#include "../../periph/uarts_priv.h"
+
 
 static MiUartDescriptor uart3 = {0};
 

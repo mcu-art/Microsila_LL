@@ -8,7 +8,7 @@ Inspired by https://github.com/MaJerle/STM32_USART_DMA
 #define STM32F103_UART3_H
 
 #include <mi_ll_settings.h>
-#include "../../core/byte_buf.h"
+#include "../core/byte_buf.h"
 
 
 // Common API

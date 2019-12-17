@@ -1,6 +1,6 @@
 
 #include "hw_desc.h"
-#include "uart1.h"
+#include "../../periph/uart1.h"
 #include "stm32f1xx_ll_usart.h"
 #include "stm32f1xx_ll_dma.h"
 #include "stm32f1xx_ll_gpio.h"

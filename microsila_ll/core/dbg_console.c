@@ -8,7 +8,9 @@
 #if MI_DEVICE == PC
 #include <stdio.h>
 #else
-#include "../periph/uarts.h"
+#include "../periph/uart1.h"
+#include "../periph/uart2.h"
+#include "../periph/uart3.h"
 #endif
 
 #if MI_DEVICE != PC
@@ -20,7 +22,9 @@
 static BYTE dc_internal_buf[DC_INTERNAL_BUF_SIZE + sizeof (ByteBuf)];
 static ByteBuf* dc_buf = 0;
 
+
 #define DC_MACRO_UART_TX_FUNC_ENDING _tx_buf_all
+#define DC_MACRO_UART_TX_ARR_FUNC_ENDING _tx_all
 
 
 
@@ -64,6 +68,11 @@ void _dc_printbuf(ByteBuf* buf) {
     if (!size) { return; }
     bb_append_array_if_fits(dc_buf, buf->data, size);
     _tx_from_dc_buf_and_reset();
+}
+
+void _dc_printarr(const BYTE* arr, const SIZETYPE size) {
+	if (!dc_buf) { dc_buf = bb_init(dc_internal_buf, DC_INTERNAL_BUF_SIZE); }
+	PPCAT(DBG_CONSOLE_UART, DC_MACRO_UART_TX_ARR_FUNC_ENDING)(arr, size);
 }
 
 

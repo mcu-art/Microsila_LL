@@ -24,7 +24,9 @@
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 #include "./user/leds.h"
-#include "microsila_ll/periph/uarts.h"
+#include "microsila_ll/periph/uart1.h"
+#include "microsila_ll/periph/uart2.h"
+#include "microsila_ll/periph/uart3.h"
 
 
 /* USER CODE END Includes */

@@ -19,22 +19,23 @@
 // Define UART to be used by debug console;
 // This has no effect on PC
 
-#define DBG_CONSOLE_UART uart2
+#define DBG_CONSOLE_UART uart1
 
 /* SOFTWARE MODULES END */
 
 
 /* DEVICE SECTION  BEGIN */
 
-#define MI_DEVICE STM32F103C
+#define MI_DEVICE STM32F103C8
+#define MI_DEVICE_FAMILY F103
 
 /* UART SECTION BEGIN */
 
 /* Comment out UARTs that your project does not use */
 //#define UART1_USE_RX
-//#define UART1_USE_TX
+#define UART1_USE_TX
 //#define UART2_USE_RX
-#define UART2_USE_TX
+//#define UART2_USE_TX
 //#define UART3_USE_RX
 //#define UART3_USE_TX
 

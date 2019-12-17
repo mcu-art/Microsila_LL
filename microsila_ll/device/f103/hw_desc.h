@@ -6,7 +6,22 @@
 #define STM32F103_HW_DESC_H
 
 /******************************************************************************************/ 
-// UARTS
+
+/* FLASH AND RAM SECTION BEGIN */
+
+
+#define EMBEDDED_RAM_SIZE             0x5000  //0x5000 = 20480 bytes
+#define EMBEDDED_FLASH_BASE_ADDR      0x08000000  
+#define EMBEDDED_FLASH_SIZE           0x10000  //64Kb = 65536 bytes
+// This information can be found in Reference Manual p.56 "Flash module organization" 
+#define EMBEDDED_FLASH_SECTORS_TOTAL  64  
+#define EMBEDDED_FLASH_SECTOR_SIZE    0x400 // 1024 bytes
+
+/* FLASH AND RAM SECTION END */
+
+
+
+/* UART SECTION BEGIN */
 
 #define  UART_DEFAULT_BAUD_RATE         115200
 
@@ -146,4 +161,10 @@
 #define UART3_DMA_CLEAR_TX_GI_FLAG        (LL_DMA_ClearFlag_GI2(UART3_DMA))
 #define UART3_DMA_CLEAR_TX_TE_FLAG        (LL_DMA_ClearFlag_TE2(UART3_DMA))
  
+
+/* UART SECTION END */
+
+
+
+
 #endif

@@ -1,5 +1,5 @@
-#ifndef _DATA_TYPES_H
-#define _DATA_TYPES_H
+#ifndef MI_DATA_TYPES_H
+#define MI_DATA_TYPES_H
 #include <stdint.h>
 
 /* Common data types; project-specific data types should be defined in `mi_ll.settings.h` */

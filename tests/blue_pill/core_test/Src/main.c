@@ -25,7 +25,7 @@
 /* USER CODE BEGIN Includes */
 #include <microsila_ll/core/utils.h>
 #include <microsila_ll/core/byte_buf.h>
-#include <microsila_ll/periph/uarts.h>
+#include <microsila_ll/periph/uart1.h>
 #include <microsila_ll/core/dbg_console.h>
 #include "user/leds.h"
 #include "test/byte_buf_test.h"
@@ -68,7 +68,7 @@ static void MX_GPIO_Init(void);
 static void MX_TIM2_Init(void);
 /* USER CODE BEGIN PFP */
 static void _main_routine(void);
-static void on_uart2_rx(ByteBuf* data);
+static void on_uart1_rx(ByteBuf* data);
 
 /* USER CODE END PFP */
 
@@ -125,7 +125,7 @@ int main(void)
   MX_TIM2_Init();
 
   /* USER CODE BEGIN 2 */
-	uart2_init(115200, on_uart2_rx, 3, 3, 3);
+	uart1_init(115200, on_uart1_rx, 3, 3, 3);
 
 	_enable_timer();
 
@@ -284,18 +284,18 @@ void halt_on_error(OP_RESULT result) {
 // If uarts are interconnected with each other, 
 // they must be disabled together, and then together re-enabled in order to reset properly
 static void reset_uarts(void) {
-	uart2_reset();
+	uart1_reset();
 }
 	
 
 void set_baud(uint32_t baud) {
-	uart2_set_baud(baud);
+	uart1_set_baud(baud);
 	delay(4);
 	reset_uarts();
 }
 
 
-static void on_uart2_rx(ByteBuf* data) {
+static void on_uart1_rx(ByteBuf* data) {
 	// TODO: process received data
 }
 
@@ -375,7 +375,7 @@ static void _main_routine(void) {
 	
 
 	led_signal_disable();
-	uart2_enable();
+	uart1_enable();
 
 	uint32_t start = systicks;
 	
@@ -409,7 +409,7 @@ static void _main_routine(void) {
 	
 	while (TRUE) { 
 		delay(1); 
-		//uart2_do_processing(); 
+		//uart1_do_processing(); 
 	}
 	
 }

@@ -26,7 +26,7 @@
 #include <microsila_ll/core/utils.h>
 #include <microsila_ll/core/byte_buf.h>
 #include <microsila_ll/core/dbg_console.h>
-#include <microsila_ll/periph/uarts.h>
+#include <microsila_ll/periph/uart1.h>
 #include "user/leds.h"
 #include "test/test.h"
 

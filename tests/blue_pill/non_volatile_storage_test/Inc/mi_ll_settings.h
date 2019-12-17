@@ -11,10 +11,10 @@
 // NOT COMPLYING TO THIS RULE MAY LEAD TO BUGS THAT ARE DIFFICULT TO FIND
 
 /* SOFTWARE MODULES BEGIN */
-// Uncomment to use debug console to print text messages
-// via uart on MCU or stdio on PC
-
+// Debug console alows printing text messages via uart on MCU or stdio on PC
 #define USE_DBG_CONSOLE
+// Functions useful for testing
+#define USE_TEST_HELPERS  
 
 // Define UART to be used by debug console;
 // This has no effect on PC
@@ -25,7 +25,10 @@
 
 
 /* DEVICE SECTION BEGIN */
-#define MI_DEVICE  STM32F103C8
+#define MI_DEVICE  					STM32F103C8
+#define MI_DEVICE_FAMILY    F103
+
+/* PERIPHERALS SECTION BEGIN */
 
 /* UART SECTION  BEGIN */
 
@@ -33,7 +36,8 @@
 #define UART1_USE_RX
 #define UART1_USE_TX
 //#define UART2_USE_RX
-////#define UART3_USE_RX
+//#define UART2_USE_TX
+//#define UART3_USE_RX
 //#define UART3_USE_TX
 
 
@@ -84,7 +88,15 @@
 #define USE_NON_VOLATILE_STORAGE
 /* NON-VOLATILE STORAGE SECTION  END */
 
-/* STM32F103C8 SECTION END */
+/* PERIPHERALS SECTION END */
+
+/* DEVICE SECTION END */
+
+
+/* EXTERNALS SECTION BEGIN */
+
+
+/* EXTERNALS SECTION END */
 
 #endif
 

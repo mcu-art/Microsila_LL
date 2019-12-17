@@ -94,7 +94,7 @@ extern BOOL mi_strcmp(const char* first, const char* sec);
 	
 
 // Check if all bytes in `data` are equal to `val`
-extern BOOL mi_memequal(const uint8_t* data, SIZETYPE size, const BYTE val);
+extern BOOL mi_memequal(const uint8_t* data, const SIZETYPE size, const BYTE val);
 
 // Get length of zero terminated string, zero not included; 
 // maximum string lenght is limited to 1024 bytes
