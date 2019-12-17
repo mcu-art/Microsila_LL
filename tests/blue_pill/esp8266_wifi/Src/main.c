@@ -27,6 +27,8 @@
 #include <microsila_ll/core/byte_buf.h>
 #include <microsila_ll/core/dbg_console.h>
 #include <microsila_ll/periph/uart1.h>
+#include <microsila_ll/periph/uart3.h>
+#include <microsila_ll/externals/esp8266_wifi.h>
 #include "user/leds.h"
 #include "test/test.h"
 
@@ -44,14 +46,24 @@
 /* Private macro -------------------------------------------------------------*/
 /* USER CODE BEGIN PM */
 // One TIM2 tick is set to 25 microseconds, that is 40 ticks per millisecond
-#define MILLIS_TO_SYSTICKS(_TICKS) (_TICKS * 40)
+//#define MILLIS_TO_SYSTICKS(_TICKS) (_TICKS * 40)
 
 /* USER CODE END PM */
 
 /* Private variables ---------------------------------------------------------*/
 
 /* USER CODE BEGIN PV */
-volatile uint32_t systicks = 0;
+// Counter of 1 millisec units after system start; 
+
+// Safe to be used from main() at any time
+//volatile uint64_t sys_millis = 0; 
+
+// Counter of timer ticks (usually of 25 microsec period);
+// Requeres lock to be applied when used from main()
+volatile uint64_t _systicks_main = 0; 
+// Lock to prevent race condition when 
+// _systicks_main updated from timer interrupt
+volatile BOOL _systicks_main_locked = FALSE;
 
 
 /* USER CODE END PV */
@@ -60,9 +72,14 @@ volatile uint32_t systicks = 0;
 void SystemClock_Config(void);
 static void MX_GPIO_Init(void);
 static void MX_TIM2_Init(void);
+
 /* USER CODE BEGIN PFP */
+
 static void _main_routine(void);
 static void on_uart1_rx(ByteBuf* data);
+uint64_t get_sys_millis(void);
+
+void on_wifi_data_received(const uint8_t channel_id, ByteBuf* data);
 
 /* USER CODE END PFP */
 
@@ -120,6 +137,8 @@ int main(void)
 
   /* USER CODE BEGIN 2 */
 	uart1_init(115200, on_uart1_rx, 3, 3, 3);
+	uart3_init(115200, esp8266_on_uart_rx, 3, 3, 3);
+	esp8266_init(on_wifi_data_received);
 
 	_enable_timer();
 
@@ -251,10 +270,79 @@ static void MX_GPIO_Init(void)
 /* USER CODE BEGIN 4 */
 
 void delay(const uint32_t millis) {
-	uint32_t target_ts = systicks + MILLIS_TO_SYSTICKS(millis);
-	while (systicks < target_ts) { }
+	uint64_t target_ts = get_sys_millis() + millis;
+	while (get_sys_millis() < target_ts) { }
 }
 
+
+uint32_t uint32_mod_perf_test(const uint32_t ITERS) {
+	volatile uint32_t count = 0;
+	const uint32_t START = 0x11223344;
+	uint32_t UNTIL = START + ITERS;
+	uint32_t val = 40;
+	for (uint32_t i=START; i<UNTIL; ++i) {
+		if (! (i%val)) { count++; }
+	}
+	return count;
+}
+
+
+uint64_t uint64_mod_perf_test(const uint32_t ITERS) {
+	volatile uint64_t count = 0;
+	const uint64_t START = 0x1122334455667788ULL;
+	uint64_t UNTIL = START + ITERS;
+	uint64_t val = 40;
+	for (uint64_t i=START; i<UNTIL; ++i) {
+		if (! (i%val)) { count++; }
+	}
+	return count;
+}
+
+
+uint32_t uint32_div_perf_test(const uint32_t ITERS) {
+	volatile uint32_t count = 0;
+	const uint32_t START = 0x11223344;
+	uint32_t UNTIL = START + ITERS;
+	uint32_t val = 40;
+	for (uint32_t i=START; i<UNTIL; ++i) {
+		if ((i/val) == 0x257) { count++; }
+	}
+	return count;
+}
+
+
+uint64_t uint64_div_perf_test(const uint32_t ITERS) {
+	volatile uint64_t count = 0;
+	const uint64_t START = 0x1122334455667788ULL;
+	uint64_t UNTIL = START + ITERS;
+	uint64_t val = 40;
+	for (uint64_t i=START; i<UNTIL; ++i) {
+		if ((i/val) == 0x2578976) { count++; }
+	}
+	return count;
+}
+
+
+uint32_t uint32_inc_perf_test(const uint32_t ITERS) {
+	volatile uint32_t count = 0;
+	const uint32_t START = 0x11223344;
+	uint32_t UNTIL = START + ITERS;
+	for (uint32_t i=START; i<UNTIL; ++i) {
+		++count;
+	}
+	return count;
+}
+
+
+uint64_t uint64_inc_perf_test(const uint32_t ITERS) {
+	volatile uint64_t count = 0;
+	const uint64_t START = 0x1122334455667788ULL;
+	uint64_t UNTIL = START + ITERS;
+	for (uint64_t i=START; i<UNTIL; ++i) {
+		++count;
+	}
+	return count;
+}
 
 static void visualize_result(OP_RESULT result) {
 	switch (result) {
@@ -276,34 +364,107 @@ void halt_on_error(OP_RESULT result) {
 }
 
 
-
-void on_uart1_rx(ByteBuf* data) {
+static void on_uart1_rx(ByteBuf* data) {
 	// TODO: process received data
+}
+
+
+
+
+// Updates and calculates number of milliseconds
+// elapsed from system start
+uint64_t get_sys_millis(void) {
+	#define TICKS_PER_MILLISEC  40
+	// This complexity is intended to avoid 64-bit division and modulo calculation,
+	// which are extremely expensive on STM32
+	static uint64_t sys_millis = 0;
+	static uint64_t systicks_last = 0;
+	static uint32_t ticks = 0;
+	_systicks_main_locked = TRUE;
+	ticks += (uint32_t) (_systicks_main - systicks_last);
+	systicks_last = _systicks_main;
+	_systicks_main_locked = FALSE;
+	sys_millis += ticks / TICKS_PER_MILLISEC;
+	ticks %= TICKS_PER_MILLISEC; // store the remainder
+	return sys_millis;
+}
+
+
+void on_wifi_data_received(const uint8_t channel_id, ByteBuf* data) {
+	dc_printf("CH(%d) received: \n", (uint32_t) channel_id); 
+	dc_printbuf(data);
 }
 
 
 static void _main_routine(void) {
 	
-	led_signal_disable();
+	//led_signal_disable();
+	visualize_result(OPR_OK);
 	uart1_enable();
+	uart3_enable();
 	
-  uint32_t start_ts = systicks;
-  dc_print("Non-volatile storage test begin...\n");
+	
+  uint64_t start_ts;
+	
+	/*
+	start_ts = get_sys_millis();
+  dc_print("Esp8266 module test begin...\n");
+  //halt_on_error(esp8266_test_all());
+  dc_printf("Test complete in %d millisecond(s).\n", get_sys_millis() - start_ts);
+	*/
+	
+	
+	const uint32_t ITERS = 100000;
+	
 
-  halt_on_error(my_test_all());
+  start_ts = get_sys_millis();
+	dc_print("uint32_mod_perf_test begin...\n");
+	volatile uint32_t r32 = uint32_mod_perf_test(ITERS);
+  dc_printf("Test complete in %d millisecond(s). \n", (uint32_t) (get_sys_millis() - start_ts));
+	
 
-  dc_printf("Test complete in %d millisecond(s).\n", (systicks - start_ts) / 40);
+  start_ts = get_sys_millis();
+	dc_print("uint64_mod_perf_test begin...\n");
+	volatile uint64_t r64 = uint64_mod_perf_test(ITERS);
+  dc_printf("Test complete in %d millisecond(s). \n", (uint32_t) (get_sys_millis() - start_ts));
+	
+	
 
+  start_ts = get_sys_millis();
+	dc_print("uint32_inc_perf_test begin...\n");
+	r32 = uint32_inc_perf_test(ITERS);
+  dc_printf("Test complete in %d millisecond(s). \n", (uint32_t) (get_sys_millis() - start_ts));
+	
+
+  start_ts = get_sys_millis();
+	dc_print("uint64_inc_perf_test begin...\n");
+	r64 = uint64_inc_perf_test(ITERS);
+  dc_printf("Test complete in %d millisecond(s). \n", (uint32_t) (get_sys_millis() - start_ts));
+	
+	
+
+  start_ts = get_sys_millis();
+	dc_print("uint32_div_perf_test begin...\n");
+	r32 = uint32_div_perf_test(ITERS);
+  dc_printf("Test complete in %d millisecond(s). \n", (uint32_t) (get_sys_millis() - start_ts));
+	
+  start_ts = get_sys_millis();
+	dc_print("uint64_div_perf_test begin...\n");
+	r64 = uint64_div_perf_test(ITERS);
+  dc_printf("Test complete in %d millisecond(s). \n", (uint32_t) (get_sys_millis() - start_ts));
+	
+	
   visualize_result(OPR_OK);
 
 	// Reset function stops ongoing transfers and clears all buffers,
 	// so that previous operation does not affect next one;
 	
 	while (TRUE) { 
-    delay(1); 
-    //uart1_do_processing();
-  }
-	
+		delay(1); 
+		// uart1_do_processing(); // no rx, no processing
+		uart3_do_processing();
+		esp8266_main_process(get_sys_millis());
+	}
 }
 
 

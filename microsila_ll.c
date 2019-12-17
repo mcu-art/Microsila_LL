@@ -60,3 +60,11 @@
 
 #endif // (MI_DEVICE != PC)
 /* DEVICE-UNIQUE SECTION END */
+
+/* EXTERNAL MODULES SECTION BEGIN */
+
+#ifdef USE_ESP8266_WIFI
+#include "microsila_ll/externals/esp8266_wifi.c"
+#endif
+
+/* EXTERNAL MODULES SECTION END */

@@ -53,10 +53,17 @@
 
 /* Private function prototypes -----------------------------------------------*/
 /* USER CODE BEGIN PFP */
-inline void _inc_systick(void) {
-  extern volatile uint32_t systicks;
-  ++systicks;
-  leds_on_timer_isr();
+
+extern volatile uint64_t _systicks_main; 
+extern volatile BOOL _systicks_main_locked;
+// Counter to be used from timer interrupt only
+volatile uint64_t systicks_tim = 0;
+
+static inline void _inc_systick(void) {
+  ++systicks_tim;
+	if (!_systicks_main_locked) {
+		_systicks_main = systicks_tim;
+	}
 }
 
 /* USER CODE END PFP */
@@ -326,6 +333,7 @@ void TIM2_IRQHandler(void)
   if(LL_TIM_IsActiveFlag_UPDATE(TIM2) == 1)
   {
     _inc_systick();
+		leds_on_timer_isr();
 
     /* Clear the update interrupt flag*/
     LL_TIM_ClearFlag_UPDATE(TIM2);
