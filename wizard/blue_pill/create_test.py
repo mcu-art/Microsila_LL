@@ -18,7 +18,7 @@ def replace_in_files(filenames: list, outdir: str, replacement_dict: dict):
 def create_test():
   args = sys.argv
   if len(args) == 1:
-    print("Error: you must supply test project name as first argument")
+    print("Usage: python create_test.py 'your_project_name'; then copy directory to the 'tests' folder")
     return
   proj_name = args[1]
   print(f"Creating test 'proj_name' for the 'BLUE_PILL' board...")
@@ -59,7 +59,8 @@ def create_test():
   shutil.move(outdir + "/MDK-ARM/@@PROJECT_NAME@@.uvprojx", outdir + f"/MDK-ARM/{proj_name}.uvprojx")
 
   # copy microsila_ll files
-  shutil.copy("../../mi_ll_settings.h", outdir + "/Inc/mi_ll_settings.h")
+  shutil.copy("../../mi_ll_settings.h.tpl", outdir + "/Inc/mi_ll_settings.h")
+  print("Done.")
 
 if __name__ == '__main__':
   create_test()

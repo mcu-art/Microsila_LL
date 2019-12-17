@@ -2,8 +2,8 @@
 /* Private definitions for UARTs. */
 
 
-#ifndef _UARTS_PRIV_H
-#define _UARTS_PRIV_H
+#ifndef MI_UARTS_PRIV_H
+#define MI_UARTS_PRIV_H
 #include <mi_ll_settings.h>
 #include "../core/byte_buf.h"
 

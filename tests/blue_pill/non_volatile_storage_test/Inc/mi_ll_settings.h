@@ -19,25 +19,22 @@
 // Define UART to be used by debug console;
 // This has no effect on PC
 
-#define DBG_CONSOLE_UART uart2
+#define DBG_CONSOLE_UART uart1
 
 /* SOFTWARE MODULES END */
 
 
-/* DEVICE SECTION  BEGIN */
+/* DEVICE SECTION BEGIN */
+#define MI_DEVICE  STM32F103C8
 
-#define MI_DEVICE STM32F103C
-
-/* UART SECTION BEGIN */
+/* UART SECTION  BEGIN */
 
 /* Comment out UARTs that your project does not use */
-//#define UART1_USE_RX
-//#define UART1_USE_TX
+#define UART1_USE_RX
+#define UART1_USE_TX
 //#define UART2_USE_RX
-#define UART2_USE_TX
-//#define UART3_USE_RX
+////#define UART3_USE_RX
 //#define UART3_USE_TX
-
 
 
 /* UART rx buffer size recommendations */
@@ -83,14 +80,11 @@
 
 /* UART SECTION  END */
 
-/* NON-VOLATILE STORAGE SECTION BEGIN */
+/* NON-VOLATILE STORAGE SECTION  BEGIN */
+#define USE_NON_VOLATILE_STORAGE
+/* NON-VOLATILE STORAGE SECTION  END */
 
-// #define USE_NON_VOLATILE_STORAGE
-
-/* NON-VOLATILE STORAGE SECTION END */
-
-
-/* DEVICE SECTION END */
+/* STM32F103C8 SECTION END */
 
 #endif
 

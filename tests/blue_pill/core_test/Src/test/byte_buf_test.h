@@ -1,7 +1,7 @@
 /* Byte buffer tests */
 
-#ifndef _BYTE_BUF_TEST_H
-#define _BYTE_BUF_TEST_H
+#ifndef BYTE_BUF_TEST_H
+#define BYTE_BUF_TEST_H
 
 #include <mi_ll_settings.h>
 #include <microsila_ll/core/byte_buf.h>

@@ -6,7 +6,7 @@
 
 #define MI_NO_DEVICE    0
 #define PC              1  // PC is useful for develpment, debugging and testing
-#define STM32F103C      2
+#define STM32F103C8      2
 
 #endif
 

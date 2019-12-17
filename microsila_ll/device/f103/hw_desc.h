@@ -2,8 +2,8 @@
 /* STM32F103 hardware description
 */
 
-#ifndef _STM32F103_HW_DESC_H
-#define _STM32F103_HW_DESC_H
+#ifndef STM32F103_HW_DESC_H
+#define STM32F103_HW_DESC_H
 
 /******************************************************************************************/ 
 // UARTS

@@ -62,7 +62,7 @@ static void MX_GPIO_Init(void);
 static void MX_TIM2_Init(void);
 /* USER CODE BEGIN PFP */
 static void _main_routine(void);
-static void on_uart2_rx(ByteBuf* data);
+static void on_uart1_rx(ByteBuf* data);
 
 /* USER CODE END PFP */
 
@@ -119,7 +119,7 @@ int main(void)
   MX_TIM2_Init();
 
   /* USER CODE BEGIN 2 */
-	uart2_init(115200, on_uart2_rx, 3, 3, 3);
+	uart1_init(115200, on_uart1_rx, 3, 3, 3);
 
 	_enable_timer();
 
@@ -278,18 +278,18 @@ void halt_on_error(OP_RESULT result) {
 // If uarts are interconnected with each other, 
 // they must be disabled together, and then together re-enabled in order to reset properly
 static void reset_uarts(void) {
-	uart2_reset();
+	uart1_reset();
 }
 	
 
 void set_baud(uint32_t baud) {
-	uart2_set_baud(baud);
+	uart1_set_baud(baud);
 	delay(4);
 	reset_uarts();
 }
 
 
-static void on_uart2_rx(ByteBuf* data) {
+static void on_uart1_rx(ByteBuf* data) {
 	// TODO: process received data
 }
 
@@ -297,21 +297,23 @@ static void on_uart2_rx(ByteBuf* data) {
 static void _main_routine(void) {
 	
 	led_signal_disable();
-	uart2_enable();
+	uart1_enable();
 	
-  uint32_t start_ts = systicks;
+	visualize_result(OPR_OK);
+	
+	uint32_t start_ts = systicks;
   dc_print("Non-volatile storage test begin...\n");
 
-  halt_on_error(my_test_all());
-
-  dc_printf("Test complete in %d millisecond(s).\n", (systicks - start_ts) / 40);
-
-  visualize_result(OPR_OK);
+	halt_on_error(nvs_test_all());
+	
+	dc_printf("Test complete in %d millisecond(s).\n", (systicks - start_ts) / 40);
+	
+	
 
 	// Reset function stops ongoing transfers and clears all buffers,
 	// so that previous operation does not affect next one;
 	
-	while (TRUE) { delay(1); uart2_do_processing(); }
+	while (TRUE) { delay(1); uart1_do_processing(); }
 	
 }
 
